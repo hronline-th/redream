@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HR onLine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #0F7A5C;
+    --brand-dark: #0A5A44;
+    --bg: #F4F6F5;
+    --card: #FFFFFF;
+    --text: #1D2422;
+    --muted: #5F6B67;
+    --line: #DDE3E0;
+    --error: #B42318;
+    --error-bg: #FEF3F2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "IBM Plex Sans Thai", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--brand);
+    color: #fff;
+    padding: 20px 16px 18px;
+  }
+  header .brand { font-weight: 600; font-size: 20px; }
+  header .sub { opacity: .85; font-size: 14px; }
+  main { padding: 16px; max-width: 480px; margin: 0 auto; }
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 20px 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  }
+  h1 { font-size: 20px; margin: 0 0 8px; font-weight: 600; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  label { display: block; font-weight: 500; margin: 16px 0 6px; }
+  input, select {
+    width: 100%;
+    font: inherit;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus, select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .row > .wide { flex: 1.4; }
+  button {
+    width: 100%;
+    font: inherit;
+    font-weight: 600;
+    padding: 14px;
+    margin-top: 20px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--brand);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:disabled { background: #9DB8AF; cursor: default; }
+  button.secondary { background: #fff; color: var(--brand); border: 1px solid var(--brand); margin-top: 10px; }
+  .notice {
+    max-height: 46vh;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    background: #FAFBFA;
+  }
+  .notice h2 { font-size: 15px; margin: 12px 0 4px; }
+  .notice h2:first-child { margin-top: 0; }
+  .notice ul { margin: 0; padding-left: 20px; }
+  .draft { display: inline-block; font-size: 12px; background: #FFF4D6; color: #7A5600; padding: 2px 8px; border-radius: 6px; margin-bottom: 8px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; font-weight: 400; }
+  .check input { width: 22px; height: 22px; margin: 2px 0 0; flex: none; }
+  .error {
+    display: none;
+    background: var(--error-bg);
+    color: var(--error);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 16px;
+    font-size: 14px;
+  }
+  .center { text-align: center; }
+  .icon { font-size: 52px; line-height: 1; margin: 8px 0 12px; }
+  .spinner {
+    width: 36px; height: 36px; margin: 24px auto 12px;
+    border: 3px solid var(--line); border-top-color: var(--brand);
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .screen { display: none; }
+  .screen.active { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">HR onLine</div>
+  <div class="sub">ระบบ HR สำหรับพนักงาน</div>
+</header>
+
+<main>
+  <!-- Loading -->
+  <section id="s-loading" class="screen active">
+    <div class="card center">
+      <div class="spinner"></div>
+      <p class="muted" id="loading-text">กำลังโหลด…</p>
+    </div>
+  </section>
+
+  <!-- Step 1: PDPA consent -->
+  <section id="s-consent" class="screen">
+    <div class="card">
+      <h1>ยินดีต้อนรับสู่ HR onLine</h1>
+      <p class="muted">ก่อนเริ่มใช้งาน โปรดอ่านและยินยอมตามประกาศความเป็นส่วนตัวด้านล่าง</p>
+      <span class="draft">ฉบับร่าง – อยู่ระหว่างตรวจสอบทางกฎหมาย</span>
+      <div class="notice">
+        <h2>ข้อมูลที่เราเก็บ</h2>
+        <ul>
+          <li>บัญชี LINE ของคุณ (รหัสผู้ใช้ LINE)</li>
+          <li>เบอร์โทรศัพท์ วันเกิด และเลขบัตร 4 ตัวท้าย เพื่อยืนยันตัวตน</li>
+          <li>ข้อมูลการทำงานที่คุณส่งผ่านระบบ เช่น การลา การลงเวลา และคำขอเอกสาร</li>
+        </ul>
+        <h2>วัตถุประสงค์</h2>
+        <ul>
+          <li>ยืนยันว่าคุณเป็นพนักงานของบริษัท และเชื่อมบัญชี LINE กับข้อมูลพนักงาน</li>
+          <li>ให้บริการด้านงานบุคคล เช่น การลา การลงเวลา ตารางงาน และคำขอเอกสาร</li>
+        </ul>
+        <h2>การเก็บรักษาและสิทธิของคุณ</h2>
+        <ul>
+          <li>ข้อมูลเก็บในระบบของบริษัท และเข้าถึงได้เฉพาะผู้ที่ได้รับอนุญาต</li>
+          <li>คุณมีสิทธิขอเข้าถึง แก้ไข หรือถอนความยินยอม โดยติดต่อฝ่ายบุคคล</li>
+        </ul>
+      </div>
+      <label class="check"><input type="checkbox" id="consent"> ฉันได้อ่านและยินยอมให้เก็บและใช้ข้อมูลตามประกาศนี้</label>
+      <button id="btn-consent" disabled>ถัดไป</button>
+    </div>
+  </section>
+
+  <!-- Step 2: identity check -->
+  <section id="s-form" class="screen">
+    <div class="card">
+      <h1>ยืนยันตัวตนพนักงาน</h1>
+      <p class="muted">กรอกข้อมูลให้ตรงกับที่ให้ไว้กับฝ่ายบุคคล</p>
+
+      <label for="phone">เบอร์โทรศัพท์</label>
+      <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="เช่น 0812345678" maxlength="15">
+
+      <label>วันเกิด</label>
+      <div class="row">
+        <select id="dob-d" aria-label="วัน"></select>
+        <select id="dob-m" class="wide" aria-label="เดือน"></select>
+        <select id="dob-y" aria-label="ปี พ.ศ."></select>
+      </div>
+
+      <label for="last4">เลขบัตรประชาชน (หรือพาสปอร์ต) 4 ตัวท้าย</label>
+      <input id="last4" type="text" inputmode="text" autocomplete="off" maxlength="4" placeholder="เช่น 1234">
+
+      <div class="error" id="form-error"></div>
+      <button id="btn-submit">ลงทะเบียน</button>
+      <button class="secondary" id="btn-back">ย้อนกลับ</button>
+    </div>
+  </section>
+
+  <!-- Done -->
+  <section id="s-done" class="screen">
+    <div class="card center">
+      <div class="icon">✅</div>
+      <h1 id="done-title">ลงทะเบียนสำเร็จ</h1>
+      <p class="muted" id="done-text">บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว</p>
+      <button id="btn-close">ปิดหน้านี้</button>
+    </div>
+  </section>
+
+  <!-- Error -->
+  <section id="s-error" class="screen">
+    <div class="card center">
+      <div class="icon">⚠️</div>
+      <h1>เกิดข้อผิดพลาด</h1>
+      <p class="muted" id="error-text">กรุณาลองใหม่อีกครั้ง</p>
+      <button id="btn-retry">ลองใหม่</button>
+    </div>
+  </section>
+</main>
+
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+  // Public IDs only. No keys or employee data live in this page.
+  const LIFF_ID = '2011968077-x2FSrHSN';
+  const ENGINE_URL = 'https://script.google.com/macros/s/AKfycbyNNtaCsvEDdfHhqJsHuyx1DnXZft2X5tfjS9c1ghWH-hNCmb-i2WTX7h2GujhpZqY7/exec';
+
+  const MESSAGES = {
+    NOT_MATCHED: 'ข้อมูลไม่ตรงกับรายชื่อพนักงาน กรุณาตรวจสอบอีกครั้ง',
+    TOO_MANY_ATTEMPTS: 'กรอกข้อมูลผิดหลายครั้งเกินไป กรุณาลองใหม่ในอีก 6 ชั่วโมง หรือติดต่อฝ่ายบุคคล',
+    INVALID_INPUT: 'กรุณากรอกข้อมูลให้ครบและถูกต้อง',
+    CONSENT_REQUIRED: 'กรุณายินยอมตามประกาศความเป็นส่วนตัวก่อน',
+    EMPLOYEE_ALREADY_LINKED: 'ข้อมูลพนักงานนี้เชื่อมกับบัญชี LINE อื่นแล้ว กรุณาติดต่อฝ่ายบุคคล',
+    ALREADY_REGISTERED: 'บัญชี LINE นี้ลงทะเบียนแล้ว',
+    SERVER_ERROR: 'ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง',
+    NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
+  };
+
+  const $ = id => document.getElementById(id);
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showError(text) {
+    $('error-text').textContent = text;
+    show('s-error');
+  }
+
+  async function callEngine(payload) {
+    const res = await fetch(ENGINE_URL, {
+      method: 'POST',
+      body: JSON.stringify(Object.assign({ idToken: liff.getIDToken() }, payload))
+    });
+    return res.json();
+  }
+
+  function fillDateSelects() {
+    const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const d = $('dob-d'), m = $('dob-m'), y = $('dob-y');
+    d.add(new Option('วัน', ''));
+    for (let i = 1; i <= 31; i++) d.add(new Option(String(i), String(i)));
+    m.add(new Option('เดือน', ''));
+    months.forEach((name, i) => m.add(new Option(name, String(i + 1))));
+    y.add(new Option('ปี พ.ศ.', ''));
+    const thisYearBE = new Date().getFullYear() + 543;
+    for (let be = thisYearBE - 15; be >= thisYearBE - 80; be--) y.add(new Option(String(be), String(be)));
+  }
+
+  function readDob() {
+    const d = $('dob-d').value, m = $('dob-m').value, beYear = $('dob-y').value;
+    if (!d || !m || !beYear) return '';
+    const ad = Number(beYear) - 543;
+    const date = new Date(ad, Number(m) - 1, Number(d));
+    if (date.getMonth() !== Number(m) - 1) return '';   // e.g. 31 February
+    return ad + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  }
+
+  function formError(text) {
+    const box = $('form-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+
+  async function start() {
+    show('s-loading');
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+
+      $('loading-text').textContent = 'กำลังตรวจสอบบัญชี…';
+      const status = await callEngine({ action: 'status' });
+
+      if (status.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
+      if (!status.ok) { showError(MESSAGES[status.code] || MESSAGES.SERVER_ERROR); return; }
+
+      if (status.registered) {
+        $('done-title').textContent = 'สวัสดีคุณ' + (status.name || '');
+        $('done-text').textContent = 'บัญชี LINE ของคุณลงทะเบียนเรียบร้อยแล้ว';
+        show('s-done');
+      } else {
+        show('s-consent');
+      }
+    } catch (err) {
+      showError(MESSAGES.NETWORK);
+    }
+  }
+
+  $('consent').addEventListener('change', e => { $('btn-consent').disabled = !e.target.checked; });
+  $('btn-consent').addEventListener('click', () => show('s-form'));
+  $('btn-back').addEventListener('click', () => { formError(''); show('s-consent'); });
+  $('last4').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''); });
+
+  $('btn-submit').addEventListener('click', async () => {
+    formError('');
+    const phone = $('phone').value.trim();
+    const dob = readDob();
+    const idLast4 = $('last4').value.trim();
+    if (phone.replace(/\D/g, '').length < 9 || !dob || idLast4.length !== 4) {
+      formError(MESSAGES.INVALID_INPUT);
+      return;
+    }
+    const btn = $('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'กำลังตรวจสอบ…';
+    try {
+      const r = await callEngine({ action: 'register', phone, dob, idLast4, consent: $('consent').checked });
+      if (r.ok) {
+        $('done-title').textContent = 'ลงทะเบียนสำเร็จ';
+        $('done-text').textContent = 'ยินดีต้อนรับคุณ' + (r.name || '') + ' บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว';
+        show('s-done');
+      } else if (r.code === 'LINE_AUTH_FAILED') {
+        liff.logout(); liff.login();
+      } else {
+        let msg = MESSAGES[r.code] || MESSAGES.SERVER_ERROR;
+        if (r.code === 'NOT_MATCHED' && typeof r.attemptsLeft === 'number') msg += ' (เหลือ ' + r.attemptsLeft + ' ครั้ง)';
+        formError(msg);
+      }
+    } catch (err) {
+      formError(MESSAGES.NETWORK);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'ลงทะเบียน';
+    }
+  });
+
+  $('btn-close').addEventListener('click', () => {
+    if (liff.isInClient()) liff.closeWindow(); else window.close();
+  });
+  $('btn-retry').addEventListener('click', start);
+
+  fillDateSelects();
+  start();
+</script>
+</body>
+</html>
