@@ -98,7 +98,21 @@
     font-size: 14px;
   }
   .center { text-align: center; }
-  .icon { font-size: 52px; line-height: 1; margin: 8px 0 12px; }
+  .icon { display: flex; justify-content: center; margin: 8px 0 16px; }
+  .icon svg { width: 64px; height: 64px; display: block; }
+  .icon .ring { fill: #E3F1EC; }
+  .icon .dot { fill: var(--brand); }
+  .icon .mark { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon.warn .ring { fill: #FEF0E1; }
+  .icon.warn .dot { fill: #C46A12; }
+  .icon .check { stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw .45s .15s ease-out forwards; }
+  .icon .pop { transform-origin: 32px 32px; animation: pop .35s ease-out both; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .icon .check { animation: none; stroke-dashoffset: 0; }
+    .icon .pop { animation: none; }
+  }
   .spinner {
     width: 36px; height: 36px; margin: 24px auto 12px;
     border: 3px solid var(--line); border-top-color: var(--brand);
@@ -181,7 +195,9 @@
   <!-- Done -->
   <section id="s-done" class="screen">
     <div class="card center">
-      <div class="icon">✅</div>
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><g class="pop"><circle class="ring" cx="32" cy="32" r="32"/><circle class="dot" cx="32" cy="32" r="22"/><path class="mark check" d="M22.5 32.5 L29 39 L41.5 26.5"/></g></svg>
+      </div>
       <h1 id="done-title">ลงทะเบียนสำเร็จ</h1>
       <p class="muted" id="done-text">บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว</p>
       <button id="btn-close">ปิดหน้านี้</button>
@@ -191,7 +207,9 @@
   <!-- Error -->
   <section id="s-error" class="screen">
     <div class="card center">
-      <div class="icon">⚠️</div>
+      <div class="icon warn" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><g class="pop"><circle class="ring" cx="32" cy="32" r="32"/><circle class="dot" cx="32" cy="32" r="22"/><path class="mark" d="M32 22 L32 34"/><circle cx="32" cy="41.5" r="2.2" fill="#fff"/></g></svg>
+      </div>
       <h1>เกิดข้อผิดพลาด</h1>
       <p class="muted" id="error-text">กรุณาลองใหม่อีกครั้ง</p>
       <button id="btn-retry">ลองใหม่</button>
