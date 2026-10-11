@@ -204,6 +204,18 @@
     </div>
   </section>
 
+  <!-- Coming soon -->
+  <section id="s-soon" class="screen">
+    <div class="card center">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><g class="pop"><circle class="ring" cx="32" cy="32" r="32"/><circle class="dot" cx="32" cy="32" r="22"/><circle class="mark" cx="32" cy="32" r="9"/><path class="mark" d="M32 27 L32 32 L35.5 34.5"/></g></svg>
+      </div>
+      <h1 id="soon-title">เร็วๆ นี้</h1>
+      <p class="muted" id="soon-text">เมนูนี้กำลังจะเปิดให้ใช้งานเร็วๆ นี้</p>
+      <button id="btn-soon-close">ปิดหน้านี้</button>
+    </div>
+  </section>
+
   <!-- Error -->
   <section id="s-error" class="screen">
     <div class="card center">
@@ -234,7 +246,28 @@
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
+  // Menu buttons open this page with ?page=<name>. Pages not built yet show "coming soon".
+  const PAGES = {
+    clockin:   { name: 'ลงเวลา',       ready: false },
+    leave:     { name: 'ลางาน',        ready: false },
+    roster:    { name: 'ตารางงาน',     ready: false },
+    documents: { name: 'ขอเอกสาร',     ready: false },
+    news:      { name: 'ประกาศ',       ready: false },
+    profile:   { name: 'ข้อมูลของฉัน', ready: true }
+  };
+
   const $ = id => document.getElementById(id);
+
+  function currentPage() {
+    const p = new URLSearchParams(location.search).get('page');
+    return PAGES[p] ? p : 'profile';
+  }
+
+  function showSoon(page) {
+    $('soon-title').textContent = PAGES[page].name + ' · เร็วๆ นี้';
+    $('soon-text').textContent = 'เมนูนี้กำลังจะเปิดให้ใช้งานเร็วๆ นี้ เราจะแจ้งให้ทราบใน LINE เมื่อพร้อม';
+    show('s-soon');
+  }
 
   function show(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -295,7 +328,10 @@
       if (status.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
       if (!status.ok) { showError(MESSAGES[status.code] || MESSAGES.SERVER_ERROR); return; }
 
-      if (status.registered) {
+      const page = currentPage();
+      if (status.registered && !PAGES[page].ready) {
+        showSoon(page);
+      } else if (status.registered) {
         $('done-title').textContent = 'สวัสดีคุณ' + (status.name || '');
         $('done-text').textContent = 'บัญชี LINE ของคุณลงทะเบียนเรียบร้อยแล้ว';
         show('s-done');
@@ -349,6 +385,9 @@
     if (liff.isInClient()) liff.closeWindow(); else window.close();
   });
   $('btn-retry').addEventListener('click', start);
+  $('btn-soon-close').addEventListener('click', () => {
+    if (liff.isInClient()) liff.closeWindow(); else window.close();
+  });
 
   fillDateSelects();
   start();
