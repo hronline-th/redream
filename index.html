@@ -129,7 +129,8 @@
   .bal-name { font-size: 13px; color: var(--muted); }
   .bal-num { font-size: 26px; font-weight: 600; color: var(--brand); line-height: 1.2; font-variant-numeric: tabular-nums; }
   .bal-of { font-size: 12px; color: var(--muted); }
-  .bal-item.off .bal-num { color: var(--muted); font-size: 15px; padding: 6px 0; }
+  .bal-item.off { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .bal-item.off .bal-of { font-size: 13px; line-height: 1.4; color: var(--text); }
   .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
   .hist { list-style: none; margin: 8px 0 0; padding: 0; }
   .hist li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -250,13 +251,13 @@
         </div>
         <p class="hint" id="lv-days">นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ</p>
 
-        <label for="lv-reason">เหตุผล (ไม่บังคับ)</label>
-        <input type="text" id="lv-reason" maxlength="200" placeholder="เช่น ไปพบแพทย์">
+        <label for="lv-reason">เหตุผลในการลา</label>
+        <input type="text" id="lv-reason" maxlength="200" placeholder="เช่น ไปพบแพทย์ ติดต่อราชการ">
 
         <div id="lv-cert-wrap" hidden>
-          <label for="lv-cert">ใบรับรองแพทย์</label>
+          <label for="lv-cert" id="lv-cert-label">ใบรับรองแพทย์</label>
           <input type="file" id="lv-cert" accept="image/*,application/pdf">
-          <p class="hint">ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบรูปหรือไฟล์ PDF ใบรับรองแพทย์</p>
+          <p class="hint" id="lv-cert-hint"></p>
         </div>
 
         <div class="error" id="lv-error"></div>
@@ -265,6 +266,7 @@
 
       <div class="card">
         <h2>ประวัติการลา</h2>
+        <p class="muted">3 ใบล่าสุด</p>
         <ul class="hist" id="lv-history"></ul>
       </div>
     </div>
@@ -318,10 +320,12 @@
     TOO_FAR_BACK: 'ยื่นย้อนหลังได้ไม่เกิน 60 วัน กรุณาติดต่อฝ่ายบุคคล',
     TOO_FAR_AHEAD: 'ยื่นล่วงหน้าได้ไม่เกิน 180 วัน',
     TOO_MANY_DAYS: 'ยื่นได้ไม่เกิน 30 วันต่อใบ',
-    CERT_REQUIRED: 'ลาป่วยตั้งแต่ 3 วันขึ้นไป กรุณาแนบใบรับรองแพทย์',
+    CERT_REQUIRED: 'กรุณาแนบใบรับรองแพทย์',
     CERT_BAD_TYPE: 'ไฟล์ใบรับรองแพทย์ต้องเป็นรูป (JPG, PNG) หรือ PDF',
     CERT_TOO_LARGE: 'ไฟล์ใหญ่เกินไป กรุณาใช้ไฟล์ไม่เกิน 5 MB',
-    NOT_ELIGIBLE_YET: 'ลาพักร้อนใช้ได้เมื่อทำงานครบ 1 ปี',
+    NOT_ELIGIBLE_YET: 'ลาพักร้อนสามารถใช้ได้เมื่ออายุงานครบ 1 ปี',
+    REASON_REQUIRED: 'กรุณากรอกเหตุผลในการลา',
+    ATTACHMENT_NOT_ALLOWED: 'ประเภทการลานี้แนบไฟล์ไม่ได้',
     INSUFFICIENT_BALANCE: 'วันลาคงเหลือไม่พอ',
     OVERLAP: 'มีใบลาในช่วงวันนี้อยู่แล้ว',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
@@ -471,7 +475,7 @@
 
   /* ---------- Leave ---------- */
   let leaveTypes = [];
-  const STATUS_TH = { submitted: 'รอ HR บันทึก', approved: 'บันทึกแล้ว', rejected: 'ไม่อนุมัติ', cancelled: 'ยกเลิก' };
+  const STATUS_TH = { submitted: 'กำลังดำเนินการ', approved: 'บันทึกแล้ว', rejected: 'ไม่อนุมัติ', cancelled: 'ยกเลิก' };
 
   function thaiDate(key) {
     const [y, m, d] = key.split('-').map(Number);
@@ -479,6 +483,11 @@
   }
 
   function fmtDays(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+
+  function eligibleText(t) {
+    const m = t.minServiceMonths || 0;
+    return 'สามารถใช้ได้เมื่ออายุงานครบ ' + (m % 12 === 0 ? (m / 12) + ' ปี' : m + ' เดือน');
+  }
 
   async function loadLeave() {
     $('loading-text').textContent = 'กำลังโหลดวันลา…';
@@ -496,7 +505,7 @@
       const num = document.createElement('div'); num.className = 'bal-num';
       const of = document.createElement('div'); of.className = 'bal-of';
       if (t.eligible) { num.textContent = fmtDays(t.left); of.textContent = 'จาก ' + t.entitled + ' วัน'; }
-      else { num.textContent = 'ยังไม่มีสิทธิ์'; of.textContent = 'ครบ ' + Math.round(t.minServiceMonths / 12) + ' ปีจึงใช้ได้'; }
+      else { num.hidden = true; of.textContent = eligibleText(t); }
       box.append(name, num, of);
       bal.append(box);
     });
@@ -505,7 +514,7 @@
     sel.innerHTML = '';
     sel.add(new Option('เลือกประเภทการลา', ''));
     leaveTypes.forEach(t => {
-      const label = t.limited ? (t.eligible ? t.name + ' (เหลือ ' + fmtDays(t.left) + ' วัน)' : t.name + ' (ยังไม่มีสิทธิ์)') : t.name;
+      const label = t.limited ? (t.eligible ? t.name + ' (เหลือ ' + fmtDays(t.left) + ' วัน)' : t.name + ' (' + eligibleText(t) + ')') : t.name;
       const opt = new Option(label, t.code);
       if (t.limited && (!t.eligible || t.left <= 0)) opt.disabled = true;
       sel.add(opt);
@@ -565,7 +574,17 @@
     $('lv-days').textContent = days > 0
       ? 'รวม ' + fmtDays(days) + ' วัน · นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ'
       : 'นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ';
-    $('lv-cert-wrap').hidden = !(t && t.certAfter > 0 && !half && days >= t.certAfter);
+    // Attachment box shows for every leave type that allows one (sick leave: also half-day).
+    const canAttach = !!(t && t.attachAllowed);
+    const mustAttach = canAttach && (t.attachRequired || (t.certAfter > 0 && !half && days >= t.certAfter));
+    $('lv-cert-wrap').hidden = !canAttach;
+    $('lv-cert-wrap').dataset.required = mustAttach ? '1' : '';
+    if (canAttach) {
+      $('lv-cert-label').textContent = t.attachLabel;
+      $('lv-cert-hint').textContent = mustAttach
+        ? 'ต้องแนบทุกครั้ง รวมถึงการลาครึ่งวัน · รูปถ่ายหรือไฟล์ PDF'
+        : 'รูปถ่ายหรือไฟล์ PDF';
+    }
   }
 
   ['lv-type', 'lv-half', 'lv-start', 'lv-end'].forEach(id => $(id).addEventListener('change', () => { lvError(''); updateLeaveForm(); }));
@@ -608,8 +627,10 @@
     if (end < start) { lvError(MESSAGES.END_BEFORE_START); return; }
     const days = leaveDays();
     if (t.limited && days > t.left) { lvError(MESSAGES.INSUFFICIENT_BALANCE + ' (เหลือ ' + fmtDays(t.left) + ' วัน)'); return; }
-    const needCert = !$('lv-cert-wrap').hidden;
-    const file = $('lv-cert').files[0];
+    if (!$('lv-reason').value.trim()) { lvError(MESSAGES.REASON_REQUIRED); return; }
+    const canAttach = !$('lv-cert-wrap').hidden;
+    const needCert = canAttach && $('lv-cert-wrap').dataset.required === '1';
+    const file = canAttach ? $('lv-cert').files[0] : null;
     if (needCert && !file) { lvError(MESSAGES.CERT_REQUIRED); return; }
 
     const btn = $('btn-lv-submit');
@@ -617,7 +638,7 @@
     btn.textContent = 'กำลังส่ง…';
     try {
       let certificate = null;
-      if (needCert && file) {
+      if (file) {
         try { certificate = await readCertificate(file); }
         catch (e) { lvError('อ่านไฟล์ไม่ได้ กรุณาเลือกรูปหรือ PDF อีกครั้ง'); return; }
       }
