@@ -59,6 +59,14 @@
   /* iPhone draws date boxes wider than the card; keep them inside and left-aligned */
   input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; min-height: 48px; }
   input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+  .warn { background: var(--error-bg); color: var(--error); border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 14px; line-height: 1.5; }
+  .warn b { display: block; margin-bottom: 2px; }
+  .field-label { display: block; font-weight: 500; margin: 16px 0 6px; }
+  .file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .file-pick { display: flex; align-items: center; gap: 12px; margin: 0; padding: 8px; border: 1px dashed var(--brand); border-radius: 10px; background: #F7FAFF; font-weight: 400; cursor: pointer; min-width: 0; }
+  .file-btn { flex: none; background: var(--brand); color: #fff; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 8px; }
+  .file-name { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .file-pick.has-file .file-name { color: var(--text); }
   .ver { text-align: center; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
@@ -254,13 +262,18 @@
           <input type="date" id="lv-end">
         </div>
         <p class="hint" id="lv-days">นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ</p>
+        <div class="warn" id="lv-over" hidden></div>
 
         <label for="lv-reason">เหตุผลในการลา</label>
         <input type="text" id="lv-reason" maxlength="200" placeholder="เช่น ไปพบแพทย์ ติดต่อราชการ">
 
         <div id="lv-cert-wrap" hidden>
-          <label for="lv-cert" id="lv-cert-label">ใบรับรองแพทย์</label>
-          <input type="file" id="lv-cert" accept="image/*,application/pdf">
+          <span class="field-label" id="lv-cert-label">ใบรับรองแพทย์</span>
+          <label class="file-pick" for="lv-cert">
+            <span class="file-btn">เลือกรูปหรือไฟล์</span>
+            <span class="file-name" id="lv-cert-name">ยังไม่ได้เลือกไฟล์</span>
+          </label>
+          <input type="file" id="lv-cert" class="file-input" accept="image/*,application/pdf">
           <p class="hint" id="lv-cert-hint"></p>
         </div>
 
@@ -299,7 +312,7 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
-  <p class="ver">HR onLine · v0.3</p>
+  <p class="ver">HR onLine · v0.3.2</p>
 </main>
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -331,7 +344,7 @@
     NOT_ELIGIBLE_YET: 'ลาพักร้อนสามารถใช้ได้เมื่ออายุงานครบ 1 ปี',
     REASON_REQUIRED: 'กรุณากรอกเหตุผลในการลา',
     ATTACHMENT_NOT_ALLOWED: 'ประเภทการลานี้แนบไฟล์ไม่ได้',
-    INSUFFICIENT_BALANCE: 'วันลาคงเหลือไม่พอ',
+    INSUFFICIENT_BALANCE: 'วันลาคงเหลือไม่พอ กรุณาติดต่อฝ่ายบุคคล',
     OVERLAP: 'มีใบลาในช่วงวันนี้อยู่แล้ว',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
@@ -489,6 +502,10 @@
 
   function fmtDays(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
 
+  function overMessage(typeName) {
+    return 'วัน' + typeName + 'คงเหลือไม่เพียงพอ ไม่สามารถยื่นเกินสิทธิ์ได้ กรุณาติดต่อฝ่ายบุคคล';
+  }
+
   function eligibleText(t) {
     const m = t.minServiceMonths || 0;
     return 'สามารถใช้ได้เมื่ออายุงานครบ ' + (m % 12 === 0 ? (m / 12) + ' ปี' : m + ' เดือน');
@@ -548,6 +565,7 @@
     $('lv-half').checked = false;
     $('lv-reason').value = '';
     $('lv-cert').value = '';
+    showFileName();
     lvError('');
     updateLeaveForm();
     show('s-leave');
@@ -579,6 +597,13 @@
     $('lv-days').textContent = days > 0
       ? 'รวม ' + fmtDays(days) + ' วัน · นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ'
       : 'นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ';
+    // Over the balance: warn straight away and lock the send button.
+    const over = !!(t && t.limited && t.eligible && days > t.left);
+    $('lv-over').hidden = !over;
+    if (over) $('lv-over').textContent = overMessage(t.name);
+    const btn = $('btn-lv-submit');
+    if (btn.textContent !== 'กำลังส่ง…') btn.disabled = over;
+
     // Attachment box shows for every leave type that allows one (sick leave: also half-day).
     const canAttach = !!(t && t.attachAllowed);
     const mustAttach = canAttach && (t.attachRequired || (t.certAfter > 0 && !half && days >= t.certAfter));
@@ -593,6 +618,14 @@
   }
 
   ['lv-type', 'lv-half', 'lv-start', 'lv-end'].forEach(id => $(id).addEventListener('change', () => { lvError(''); updateLeaveForm(); }));
+  ['lv-start', 'lv-end'].forEach(id => $(id).addEventListener('input', updateLeaveForm));
+
+  function showFileName() {
+    const f = $('lv-cert').files[0];
+    $('lv-cert-name').textContent = f ? f.name : 'ยังไม่ได้เลือกไฟล์';
+    $('lv-cert-name').parentElement.classList.toggle('has-file', !!f);
+  }
+  $('lv-cert').addEventListener('change', () => { lvError(''); showFileName(); });
 
   // Photos are shrunk to max 1600 px before sending, so uploads stay small on mobile data.
   function readCertificate(file) {
@@ -631,7 +664,7 @@
     if (!start || !end) { lvError(MESSAGES.INVALID_DATES); return; }
     if (end < start) { lvError(MESSAGES.END_BEFORE_START); return; }
     const days = leaveDays();
-    if (t.limited && days > t.left) { lvError(MESSAGES.INSUFFICIENT_BALANCE + ' (เหลือ ' + fmtDays(t.left) + ' วัน)'); return; }
+    if (t.limited && days > t.left) { lvError(overMessage(t.name)); return; }
     if (!$('lv-reason').value.trim()) { lvError(MESSAGES.REASON_REQUIRED); return; }
     const canAttach = !$('lv-cert-wrap').hidden;
     const needCert = canAttach && $('lv-cert-wrap').dataset.required === '1';
@@ -660,15 +693,14 @@
       } else if (r.code === 'LINE_AUTH_FAILED') {
         liff.logout(); liff.login();
       } else {
-        let msg = MESSAGES[r.code] || MESSAGES.SERVER_ERROR;
-        if (r.code === 'INSUFFICIENT_BALANCE' && typeof r.left === 'number') msg += ' (เหลือ ' + fmtDays(r.left) + ' วัน)';
-        lvError(msg);
+        lvError(r.code === 'INSUFFICIENT_BALANCE' ? overMessage(t.name) : (MESSAGES[r.code] || MESSAGES.SERVER_ERROR));
       }
     } catch (err) {
       lvError(MESSAGES.NETWORK);
     } finally {
-      btn.disabled = false;
       btn.textContent = 'ส่งใบลา';
+      btn.disabled = false;
+      updateLeaveForm();
     }
   });
   $('btn-soon-close').addEventListener('click', () => {
