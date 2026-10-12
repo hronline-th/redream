@@ -56,6 +56,10 @@
     color: var(--text);
   }
   input:focus, select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+  /* iPhone draws date boxes wider than the card; keep them inside and left-aligned */
+  input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; min-height: 48px; }
+  input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+  .ver { text-align: center; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
   .row > .wide { flex: 1.4; }
@@ -295,6 +299,7 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
+  <p class="ver">HR onLine · v0.3</p>
 </main>
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
