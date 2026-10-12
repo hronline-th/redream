@@ -121,6 +121,25 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .screen { display: none; }
   .screen.active { display: block; }
+  [hidden] { display: none !important; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  h2 { font-size: 17px; margin: 0 0 4px; font-weight: 600; }
+  .bal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .bal-item { background: var(--bg); border-radius: 12px; padding: 12px 8px; text-align: center; min-width: 0; }
+  .bal-name { font-size: 13px; color: var(--muted); }
+  .bal-num { font-size: 26px; font-weight: 600; color: var(--brand); line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .bal-of { font-size: 12px; color: var(--muted); }
+  .bal-item.off .bal-num { color: var(--muted); font-size: 15px; padding: 6px 0; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .hist { list-style: none; margin: 8px 0 0; padding: 0; }
+  .hist li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .hist li:last-child { border-bottom: 0; }
+  .hist .when { font-size: 13px; color: var(--muted); }
+  .pill { font-size: 12px; padding: 2px 10px; border-radius: 999px; white-space: nowrap; align-self: center; }
+  .pill.submitted { background: #FFF3DC; color: #8A5300; }
+  .pill.approved { background: #E3F4EA; color: #1B6B3A; }
+  .pill.rejected, .pill.cancelled { background: #FDECEC; color: #A1262A; }
+  .empty { font-size: 14px; color: var(--muted); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -204,6 +223,53 @@
     </div>
   </section>
 
+  <!-- Leave -->
+  <section id="s-leave" class="screen">
+    <div class="stack">
+      <div class="card">
+        <h1>ลางาน</h1>
+        <p class="muted" id="lv-year">วันลาคงเหลือปีนี้</p>
+        <div class="bal" id="lv-balances"></div>
+      </div>
+
+      <div class="card">
+        <h2>ยื่นใบลา</h2>
+        <p class="muted">คุยกับหัวหน้าก่อน แล้วค่อยยื่นใบลาที่นี่</p>
+
+        <label for="lv-type">ประเภทการลา</label>
+        <select id="lv-type"></select>
+
+        <label class="check" id="lv-half-wrap"><input type="checkbox" id="lv-half"> ลาครึ่งวัน (ครึ่งหนึ่งของกะงาน)</label>
+
+        <label for="lv-start" id="lv-start-label">วันที่เริ่มลา</label>
+        <input type="date" id="lv-start">
+
+        <div id="lv-end-wrap">
+          <label for="lv-end">ถึงวันที่</label>
+          <input type="date" id="lv-end">
+        </div>
+        <p class="hint" id="lv-days">นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ</p>
+
+        <label for="lv-reason">เหตุผล (ไม่บังคับ)</label>
+        <input type="text" id="lv-reason" maxlength="200" placeholder="เช่น ไปพบแพทย์">
+
+        <div id="lv-cert-wrap" hidden>
+          <label for="lv-cert">ใบรับรองแพทย์</label>
+          <input type="file" id="lv-cert" accept="image/*,application/pdf">
+          <p class="hint">ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบรูปหรือไฟล์ PDF ใบรับรองแพทย์</p>
+        </div>
+
+        <div class="error" id="lv-error"></div>
+        <button id="btn-lv-submit">ส่งใบลา</button>
+      </div>
+
+      <div class="card">
+        <h2>ประวัติการลา</h2>
+        <ul class="hist" id="lv-history"></ul>
+      </div>
+    </div>
+  </section>
+
   <!-- Coming soon -->
   <section id="s-soon" class="screen">
     <div class="card center">
@@ -243,13 +309,28 @@
     EMPLOYEE_ALREADY_LINKED: 'ข้อมูลพนักงานนี้เชื่อมกับบัญชี LINE อื่นแล้ว กรุณาติดต่อฝ่ายบุคคล',
     ALREADY_REGISTERED: 'บัญชี LINE นี้ลงทะเบียนแล้ว',
     SERVER_ERROR: 'ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง',
+    NOT_REGISTERED: 'กรุณาลงทะเบียนก่อน ที่เมนู "ข้อมูลของฉัน"',
+    LEAVE_TYPE_NOT_ALLOWED: 'ประเภทการลานี้ยื่นเองไม่ได้ กรุณาติดต่อฝ่ายบุคคล',
+    HALF_DAY_NOT_ALLOWED: 'ประเภทการลานี้ลาครึ่งวันไม่ได้',
+    INVALID_DATES: 'กรุณาเลือกวันที่ให้ครบ',
+    END_BEFORE_START: 'วันสิ้นสุดต้องไม่ก่อนวันเริ่มลา',
+    CROSS_YEAR: 'ใบลาข้ามปีไม่ได้ กรุณาแยกเป็น 2 ใบ (ก่อนและหลัง 1 ม.ค.)',
+    TOO_FAR_BACK: 'ยื่นย้อนหลังได้ไม่เกิน 60 วัน กรุณาติดต่อฝ่ายบุคคล',
+    TOO_FAR_AHEAD: 'ยื่นล่วงหน้าได้ไม่เกิน 180 วัน',
+    TOO_MANY_DAYS: 'ยื่นได้ไม่เกิน 30 วันต่อใบ',
+    CERT_REQUIRED: 'ลาป่วยตั้งแต่ 3 วันขึ้นไป กรุณาแนบใบรับรองแพทย์',
+    CERT_BAD_TYPE: 'ไฟล์ใบรับรองแพทย์ต้องเป็นรูป (JPG, PNG) หรือ PDF',
+    CERT_TOO_LARGE: 'ไฟล์ใหญ่เกินไป กรุณาใช้ไฟล์ไม่เกิน 5 MB',
+    NOT_ELIGIBLE_YET: 'ลาพักร้อนใช้ได้เมื่อทำงานครบ 1 ปี',
+    INSUFFICIENT_BALANCE: 'วันลาคงเหลือไม่พอ',
+    OVERLAP: 'มีใบลาในช่วงวันนี้อยู่แล้ว',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
   // Menu buttons open this page with ?page=<name>. Pages not built yet show "coming soon".
   const PAGES = {
     clockin:   { name: 'ลงเวลา',       ready: false },
-    leave:     { name: 'ลางาน',        ready: false },
+    leave:     { name: 'ลางาน',        ready: true },
     roster:    { name: 'ตารางงาน',     ready: false },
     documents: { name: 'ขอเอกสาร',     ready: false },
     news:      { name: 'ประกาศ',       ready: false },
@@ -331,6 +412,8 @@
       const page = currentPage();
       if (status.registered && !PAGES[page].ready) {
         showSoon(page);
+      } else if (status.registered && page === 'leave') {
+        await loadLeave();
       } else if (status.registered) {
         $('done-title').textContent = 'สวัสดีคุณ' + (status.name || '');
         $('done-text').textContent = 'บัญชี LINE ของคุณลงทะเบียนเรียบร้อยแล้ว';
@@ -385,6 +468,183 @@
     if (liff.isInClient()) liff.closeWindow(); else window.close();
   });
   $('btn-retry').addEventListener('click', start);
+
+  /* ---------- Leave ---------- */
+  let leaveTypes = [];
+  const STATUS_TH = { submitted: 'รอ HR บันทึก', approved: 'บันทึกแล้ว', rejected: 'ไม่อนุมัติ', cancelled: 'ยกเลิก' };
+
+  function thaiDate(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+  }
+
+  function fmtDays(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+
+  async function loadLeave() {
+    $('loading-text').textContent = 'กำลังโหลดวันลา…';
+    const r = await callEngine({ action: 'leaveInfo' });
+    if (!r.ok) { showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+    leaveTypes = r.types;
+
+    $('lv-year').textContent = 'วันลาคงเหลือปี ' + (r.year + 543);
+    const bal = $('lv-balances');
+    bal.innerHTML = '';
+    leaveTypes.filter(t => t.limited).forEach(t => {
+      const box = document.createElement('div');
+      box.className = 'bal-item' + (t.eligible ? '' : ' off');
+      const name = document.createElement('div'); name.className = 'bal-name'; name.textContent = t.name;
+      const num = document.createElement('div'); num.className = 'bal-num';
+      const of = document.createElement('div'); of.className = 'bal-of';
+      if (t.eligible) { num.textContent = fmtDays(t.left); of.textContent = 'จาก ' + t.entitled + ' วัน'; }
+      else { num.textContent = 'ยังไม่มีสิทธิ์'; of.textContent = 'ครบ ' + Math.round(t.minServiceMonths / 12) + ' ปีจึงใช้ได้'; }
+      box.append(name, num, of);
+      bal.append(box);
+    });
+
+    const sel = $('lv-type');
+    sel.innerHTML = '';
+    sel.add(new Option('เลือกประเภทการลา', ''));
+    leaveTypes.forEach(t => {
+      const label = t.limited ? (t.eligible ? t.name + ' (เหลือ ' + fmtDays(t.left) + ' วัน)' : t.name + ' (ยังไม่มีสิทธิ์)') : t.name;
+      const opt = new Option(label, t.code);
+      if (t.limited && (!t.eligible || t.left <= 0)) opt.disabled = true;
+      sel.add(opt);
+    });
+
+    const hist = $('lv-history');
+    hist.innerHTML = '';
+    if (!r.history.length) {
+      const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'ยังไม่มีใบลา';
+      hist.append(li);
+    }
+    r.history.forEach(h => {
+      const li = document.createElement('li');
+      const left = document.createElement('div');
+      const t = document.createElement('div'); t.textContent = h.type + ' · ' + fmtDays(h.days) + ' วัน';
+      const w = document.createElement('div'); w.className = 'when';
+      w.textContent = h.halfDay ? thaiDate(h.start) + ' (ครึ่งวัน)' : (h.start === h.end ? thaiDate(h.start) : thaiDate(h.start) + ' – ' + thaiDate(h.end));
+      left.append(t, w);
+      const pill = document.createElement('span'); pill.className = 'pill ' + h.status; pill.textContent = STATUS_TH[h.status] || h.status;
+      li.append(left, pill);
+      hist.append(li);
+    });
+
+    $('lv-start').value = r.today;
+    $('lv-end').value = r.today;
+    $('lv-half').checked = false;
+    $('lv-reason').value = '';
+    $('lv-cert').value = '';
+    lvError('');
+    updateLeaveForm();
+    show('s-leave');
+  }
+
+  function lvError(text) {
+    const box = $('lv-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+
+  function leaveDays() {
+    const s = $('lv-start').value, e = $('lv-end').value;
+    if ($('lv-half').checked) return s ? 0.5 : 0;
+    if (!s || !e) return 0;
+    const [a, b] = [s, e].map(x => { const p = x.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); });
+    return Math.round((b - a) / 86400000) + 1;
+  }
+
+  function updateLeaveForm() {
+    const t = leaveTypes.find(x => x.code === $('lv-type').value);
+    $('lv-half-wrap').hidden = !(t && t.halfDay);
+    if (!(t && t.halfDay)) $('lv-half').checked = false;
+    const half = $('lv-half').checked;
+    $('lv-end-wrap').hidden = half;
+    $('lv-start-label').textContent = half ? 'วันที่ลา' : 'วันที่เริ่มลา';
+    if (!half && $('lv-end').value < $('lv-start').value) $('lv-end').value = $('lv-start').value;
+    const days = leaveDays();
+    $('lv-days').textContent = days > 0
+      ? 'รวม ' + fmtDays(days) + ' วัน · นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ'
+      : 'นับเฉพาะวันที่มีกะงาน หากช่วงลามีวันหยุดคั่น ให้แยกยื่นเป็นหลายใบ';
+    $('lv-cert-wrap').hidden = !(t && t.certAfter > 0 && !half && days >= t.certAfter);
+  }
+
+  ['lv-type', 'lv-half', 'lv-start', 'lv-end'].forEach(id => $(id).addEventListener('change', () => { lvError(''); updateLeaveForm(); }));
+
+  // Photos are shrunk to max 1600 px before sending, so uploads stay small on mobile data.
+  function readCertificate(file) {
+    return new Promise((resolve, reject) => {
+      if (file.type === 'application/pdf') {
+        const fr = new FileReader();
+        fr.onload = () => resolve({ type: 'application/pdf', data: String(fr.result).split(',')[1] });
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+        return;
+      }
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve({ type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.82).split(',')[1] });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+
+  $('btn-lv-submit').addEventListener('click', async () => {
+    lvError('');
+    const type = $('lv-type').value;
+    const t = leaveTypes.find(x => x.code === type);
+    if (!t) { lvError('กรุณาเลือกประเภทการลา'); return; }
+    const half = $('lv-half').checked;
+    const start = $('lv-start').value;
+    const end = half ? start : $('lv-end').value;
+    if (!start || !end) { lvError(MESSAGES.INVALID_DATES); return; }
+    if (end < start) { lvError(MESSAGES.END_BEFORE_START); return; }
+    const days = leaveDays();
+    if (t.limited && days > t.left) { lvError(MESSAGES.INSUFFICIENT_BALANCE + ' (เหลือ ' + fmtDays(t.left) + ' วัน)'); return; }
+    const needCert = !$('lv-cert-wrap').hidden;
+    const file = $('lv-cert').files[0];
+    if (needCert && !file) { lvError(MESSAGES.CERT_REQUIRED); return; }
+
+    const btn = $('btn-lv-submit');
+    btn.disabled = true;
+    btn.textContent = 'กำลังส่ง…';
+    try {
+      let certificate = null;
+      if (needCert && file) {
+        try { certificate = await readCertificate(file); }
+        catch (e) { lvError('อ่านไฟล์ไม่ได้ กรุณาเลือกรูปหรือ PDF อีกครั้ง'); return; }
+      }
+      const r = await callEngine({
+        action: 'leaveSubmit', type, halfDay: half, start, end,
+        reason: $('lv-reason').value.trim(), certificate
+      });
+      if (r.ok) {
+        $('done-title').textContent = 'ส่งใบลาแล้ว';
+        $('done-text').textContent = r.type + ' ' + fmtDays(r.days) + ' วัน' +
+          (r.left !== null && r.left !== undefined ? ' · คงเหลือ ' + fmtDays(r.left) + ' วัน' : '') +
+          ' · ฝ่ายบุคคลได้รับแจ้งแล้ว';
+        show('s-done');
+      } else if (r.code === 'LINE_AUTH_FAILED') {
+        liff.logout(); liff.login();
+      } else {
+        let msg = MESSAGES[r.code] || MESSAGES.SERVER_ERROR;
+        if (r.code === 'INSUFFICIENT_BALANCE' && typeof r.left === 'number') msg += ' (เหลือ ' + fmtDays(r.left) + ' วัน)';
+        lvError(msg);
+      }
+    } catch (err) {
+      lvError(MESSAGES.NETWORK);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'ส่งใบลา';
+    }
+  });
   $('btn-soon-close').addEventListener('click', () => {
     if (liff.isInClient()) liff.closeWindow(); else window.close();
   });
