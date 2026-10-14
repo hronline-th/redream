@@ -149,10 +149,16 @@
   .hist li:last-child { border-bottom: 0; }
   .hist .when { font-size: 13px; color: var(--muted); }
   .pill { font-size: 12px; padding: 2px 10px; border-radius: 999px; white-space: nowrap; align-self: center; }
-  .pill.submitted { background: #FFF3DC; color: #8A5300; }
-  .pill.approved { background: #E3F4EA; color: #1B6B3A; }
+  .pill.submitted, .pill.pending { background: #FFF3DC; color: #8A5300; }
+  .pill.approved, .pill.done { background: #E3F4EA; color: #1B6B3A; }
   .pill.rejected, .pill.cancelled { background: #FDECEC; color: #A1262A; }
   .empty { font-size: 14px; color: var(--muted); padding: 8px 0; }
+  .note { background: #EEF5FF; color: #1E3A6B; border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 14px; line-height: 1.5; }
+  .confirm { background: #FFF8E6; color: #6B4500; border-radius: 12px; padding: 14px 12px; margin-top: 16px; font-size: 14px; line-height: 1.5; }
+  .confirm .row button { margin-top: 12px; padding: 12px; }
+  button.sm { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; border-radius: 10px; flex: none; align-self: center; }
+  .slips li { align-items: center; }
+  .slip-month { font-weight: 500; }
 </style>
 </head>
 <body>
@@ -289,6 +295,65 @@
     </div>
   </section>
 
+  <!-- Documents -->
+  <section id="s-docs" class="screen">
+    <div class="stack">
+      <div class="card">
+        <h1>ขอเอกสาร</h1>
+        <p class="muted">เลือกเอกสาร ภาษา และวัตถุประสงค์ แล้วกดส่งคำขอ</p>
+
+        <label for="dc-type">ประเภทเอกสาร</label>
+        <select id="dc-type"></select>
+
+        <label for="dc-lang">ภาษา</label>
+        <select id="dc-lang"></select>
+
+        <label for="dc-purpose">วัตถุประสงค์</label>
+        <select id="dc-purpose"></select>
+
+        <div id="dc-other-wrap" hidden>
+          <label for="dc-other">ระบุวัตถุประสงค์</label>
+          <input type="text" id="dc-other" maxlength="150" placeholder="เช่น ยื่นประกอบการสมัครงานพิเศษ">
+        </div>
+
+        <div class="note" id="dc-salary" hidden></div>
+
+        <div class="confirm" id="dc-confirm" hidden>
+          <div id="dc-confirm-text"></div>
+          <div class="row">
+            <button class="secondary" id="btn-dc-cancel">ยกเลิก</button>
+            <button id="btn-dc-again">ส่งคำขออีกครั้ง</button>
+          </div>
+        </div>
+
+        <div class="error" id="dc-error"></div>
+        <button id="btn-dc-submit">ส่งคำขอ</button>
+      </div>
+
+      <div class="card">
+        <h2>ประวัติคำขอ</h2>
+        <p class="muted">3 รายการล่าสุด</p>
+        <ul class="hist" id="dc-history"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Payslip -->
+  <section id="s-payslip" class="screen">
+    <div class="stack">
+      <div class="card">
+        <h1>สลิปเงินเดือน</h1>
+        <p class="muted">6 เดือนล่าสุด</p>
+        <ul class="hist slips" id="ps-list"></ul>
+        <div class="error" id="ps-error"></div>
+      </div>
+      <div class="card">
+        <h2>รหัสผ่านสำหรับเปิดไฟล์</h2>
+        <p class="muted" style="margin:0">ไฟล์สลิปล็อกด้วยวันเกิดของคุณ แบบ ปี ค.ศ. เดือน วัน รวม 8 หลัก เช่น เกิดวันที่ 24 มีนาคม 1998 รหัสผ่านคือ 19980324</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Coming soon -->
   <section id="s-soon" class="screen">
     <div class="card center">
@@ -312,7 +377,7 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
-  <p class="ver">HR onLine · v0.3.2</p>
+  <p class="ver">HR onLine · v0.4.0</p>
 </main>
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -346,17 +411,26 @@
     ATTACHMENT_NOT_ALLOWED: 'ประเภทการลานี้แนบไฟล์ไม่ได้',
     INSUFFICIENT_BALANCE: 'วันลาคงเหลือไม่พอ กรุณาติดต่อฝ่ายบุคคล',
     OVERLAP: 'มีใบลาในช่วงวันนี้อยู่แล้ว',
+    DOC_TYPE_NOT_ALLOWED: 'กรุณาเลือกประเภทเอกสาร',
+    PURPOSE_REQUIRED: 'กรุณาเลือกวัตถุประสงค์',
+    OTHER_TEXT_REQUIRED: 'กรุณาระบุวัตถุประสงค์',
+    LANGUAGE_REQUIRED: 'กรุณาเลือกภาษา',
+    PAYSLIP_NOT_AVAILABLE: 'สลิปเดือนนี้ยังไม่พร้อม',
+    PAYSLIP_PROBLEM: 'ยังดาวน์โหลดสลิปเดือนนี้ไม่ได้ ฝ่ายบุคคลได้รับแจ้งแล้ว',
+    DOB_MISSING: 'ไม่พบวันเกิดในระบบ กรุณาติดต่อ HR',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
   // Menu buttons open this page with ?page=<name>. Pages not built yet show "coming soon".
   const PAGES = {
-    clockin:   { name: 'ลงเวลา',       ready: false },
-    leave:     { name: 'ลางาน',        ready: true },
-    roster:    { name: 'ตารางงาน',     ready: false },
-    documents: { name: 'ขอเอกสาร',     ready: false },
-    news:      { name: 'ประกาศ',       ready: false },
-    profile:   { name: 'ข้อมูลของฉัน', ready: true }
+    clockin:   { name: 'ลงเวลา',         ready: false },
+    leave:     { name: 'ลางาน',          ready: true },
+    roster:    { name: 'ตารางงาน',       ready: false },
+    documents: { name: 'ขอเอกสาร',       ready: true },
+    payslip:   { name: 'สลิปเงินเดือน',   ready: true },
+    news:      { name: 'ประกาศ',         ready: false },
+    profile:   { name: 'ข้อมูลของฉัน',    ready: true },
+    faq:       { name: 'คำถามที่พบบ่อย', ready: false }
   };
 
   const $ = id => document.getElementById(id);
@@ -381,6 +455,13 @@
   function showError(text) {
     $('error-text').textContent = text;
     show('s-error');
+  }
+
+  function showDone(title, text) {
+    $('done-title').textContent = title;
+    $('done-text').textContent = text || '';
+    $('done-text').hidden = !text;
+    show('s-done');
   }
 
   async function callEngine(payload) {
@@ -436,10 +517,12 @@
         showSoon(page);
       } else if (status.registered && page === 'leave') {
         await loadLeave();
+      } else if (status.registered && page === 'documents') {
+        await loadDocs();
+      } else if (status.registered && page === 'payslip') {
+        await loadPayslips();
       } else if (status.registered) {
-        $('done-title').textContent = 'สวัสดีคุณ' + (status.name || '');
-        $('done-text').textContent = 'บัญชี LINE ของคุณลงทะเบียนเรียบร้อยแล้ว';
-        show('s-done');
+        showDone('สวัสดีคุณ' + (status.name || ''), 'บัญชี LINE ของคุณลงทะเบียนเรียบร้อยแล้ว');
       } else {
         show('s-consent');
       }
@@ -468,9 +551,7 @@
     try {
       const r = await callEngine({ action: 'register', phone, dob, idLast4, consent: $('consent').checked });
       if (r.ok) {
-        $('done-title').textContent = 'ลงทะเบียนสำเร็จ';
-        $('done-text').textContent = 'ยินดีต้อนรับคุณ' + (r.name || '') + ' บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว';
-        show('s-done');
+        showDone('ลงทะเบียนสำเร็จ', 'ยินดีต้อนรับคุณ' + (r.name || '') + ' บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว');
       } else if (r.code === 'LINE_AUTH_FAILED') {
         liff.logout(); liff.login();
       } else {
@@ -685,11 +766,9 @@
         reason: $('lv-reason').value.trim(), certificate
       });
       if (r.ok) {
-        $('done-title').textContent = 'ส่งใบลาแล้ว';
-        $('done-text').textContent = r.type + ' ' + fmtDays(r.days) + ' วัน' +
+        showDone('ส่งใบลาแล้ว', r.type + ' ' + fmtDays(r.days) + ' วัน' +
           (r.left !== null && r.left !== undefined ? ' · คงเหลือ ' + fmtDays(r.left) + ' วัน' : '') +
-          ' · ฝ่ายบุคคลได้รับแจ้งแล้ว';
-        show('s-done');
+          ' · ฝ่ายบุคคลได้รับแจ้งแล้ว');
       } else if (r.code === 'LINE_AUTH_FAILED') {
         liff.logout(); liff.login();
       } else {
@@ -706,6 +785,242 @@
   $('btn-soon-close').addEventListener('click', () => {
     if (liff.isInClient()) liff.closeWindow(); else window.close();
   });
+
+  /* ---------- Documents ---------- */
+  let docTypes = [], docPurposes = [], docRecent = {};
+  const DOC_STATUS_TH = { submitted: 'กำลังดำเนินการ', done: 'สำเร็จ', rejected: 'ไม่อนุมัติ' };
+  const LANG_TH = { th: 'ภาษาไทย', en: 'ภาษาอังกฤษ' };
+
+  function dcError(text) {
+    const box = $('dc-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+
+  async function loadDocs() {
+    $('loading-text').textContent = 'กำลังโหลด…';
+    const r = await callEngine({ action: 'docInfo' });
+    if (!r.ok) { showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+    docTypes = r.types; docPurposes = r.purposes; docRecent = r.recent || {};
+
+    const ts = $('dc-type');
+    ts.innerHTML = '';
+    ts.add(new Option('เลือกเอกสาร', ''));
+    docTypes.forEach(t => ts.add(new Option(t.name, t.code)));
+
+    const ps = $('dc-purpose');
+    ps.innerHTML = '';
+    ps.add(new Option('เลือกวัตถุประสงค์', ''));
+    docPurposes.forEach(p => ps.add(new Option(p.name, p.code)));
+
+    $('dc-other').value = '';
+    const hist = $('dc-history');
+    hist.innerHTML = '';
+    if (!r.history.length) {
+      const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'ยังไม่มีคำขอ';
+      hist.append(li);
+    }
+    r.history.forEach(h => {
+      const li = document.createElement('li');
+      const left = document.createElement('div');
+      const t = document.createElement('div'); t.textContent = h.type;
+      const w = document.createElement('div'); w.className = 'when';
+      w.textContent = (h.date ? thaiDate(h.date) + ' · ' : '') + h.purpose;
+      left.append(t, w);
+      const pill = document.createElement('span'); pill.className = 'pill ' + h.status; pill.textContent = DOC_STATUS_TH[h.status] || h.status;
+      li.append(left, pill);
+      hist.append(li);
+    });
+
+    dcError('');
+    $('dc-confirm').hidden = true;
+    updateDocForm();
+    show('s-docs');
+  }
+
+  function updateDocForm() {
+    const t = docTypes.find(x => x.code === $('dc-type').value);
+    const ls = $('dc-lang');
+    const keep = ls.value;
+    ls.innerHTML = '';
+    ls.add(new Option('เลือกภาษา', ''));
+    (t ? t.languages : ['th', 'en']).forEach(l => ls.add(new Option(LANG_TH[l] || l, l)));
+    if ([...ls.options].some(o => o.value === keep)) ls.value = keep;
+
+    const p = docPurposes.find(x => x.code === $('dc-purpose').value);
+    $('dc-other-wrap').hidden = !(p && p.needsText);
+
+    let salary = '';
+    if (t && t.salaryRule === 'always') salary = 'yes';
+    else if (t && t.salaryRule === 'by_purpose' && p) salary = p.salary;
+    $('dc-salary').hidden = !(salary === 'yes' || salary === 'hr');
+    $('dc-salary').textContent = salary === 'yes' ? 'เอกสารนี้จะระบุเงินเดือน' : 'ฝ่ายบุคคลจะพิจารณาการระบุเงินเดือน';
+    $('dc-confirm').hidden = true;
+    $('btn-dc-submit').hidden = false;
+  }
+
+  ['dc-type', 'dc-purpose', 'dc-lang'].forEach(id => $(id).addEventListener('change', () => { dcError(''); updateDocForm(); }));
+  $('dc-other').addEventListener('input', () => dcError(''));
+
+  function docInput() {
+    return {
+      type: $('dc-type').value,
+      language: $('dc-lang').value,
+      purpose: $('dc-purpose').value,
+      purposeText: $('dc-other').value.trim()
+    };
+  }
+
+  function docCheck(d) {
+    if (!d.type) return MESSAGES.DOC_TYPE_NOT_ALLOWED;
+    if (!d.language) return MESSAGES.LANGUAGE_REQUIRED;
+    if (!d.purpose) return MESSAGES.PURPOSE_REQUIRED;
+    const p = docPurposes.find(x => x.code === d.purpose);
+    if (p && p.needsText && !d.purposeText) return MESSAGES.OTHER_TEXT_REQUIRED;
+    return '';
+  }
+
+  function askRepeat(typeCode, last) {
+    const t = docTypes.find(x => x.code === typeCode);
+    $('dc-confirm-text').textContent = 'คุณเคยขอ' + (t ? t.name : 'เอกสารนี้') + 'แล้วเมื่อ ' + thaiDate(last.date) +
+      (last.purpose ? ' (' + last.purpose + ')' : '') + ' ต้องการส่งคำขออีกครั้งหรือไม่';
+    $('dc-confirm').hidden = false;
+    $('btn-dc-submit').hidden = true;
+  }
+
+  async function sendDoc(confirmRepeat) {
+    dcError('');
+    const d = docInput();
+    const problem = docCheck(d);
+    if (problem) { dcError(problem); return; }
+    if (!confirmRepeat && docRecent[d.type]) { askRepeat(d.type, docRecent[d.type]); return; }
+
+    const btn = confirmRepeat ? $('btn-dc-again') : $('btn-dc-submit');
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'กำลังส่ง…';
+    try {
+      const r = await callEngine(Object.assign({ action: 'docSubmit', confirmRepeat: !!confirmRepeat }, d));
+      if (r.ok) {
+        showDone('ส่งคำขอสำเร็จ', '');
+      } else if (r.code === 'REPEAT_CONFIRM') {
+        docRecent[d.type] = r.last;
+        askRepeat(d.type, r.last);
+      } else if (r.code === 'LINE_AUTH_FAILED') {
+        liff.logout(); liff.login();
+      } else {
+        dcError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
+      }
+    } catch (err) {
+      dcError(MESSAGES.NETWORK);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
+  $('btn-dc-submit').addEventListener('click', () => sendDoc(false));
+  $('btn-dc-again').addEventListener('click', () => sendDoc(true));
+  $('btn-dc-cancel').addEventListener('click', () => { $('dc-confirm').hidden = true; $('btn-dc-submit').hidden = false; });
+
+  /* ---------- Payslips ---------- */
+  const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+  function thaiMonth(key) {
+    const [y, m] = key.split('-').map(Number);
+    return MONTHS_TH[m - 1] + ' ' + (y + 543);
+  }
+
+  function psError(text) {
+    const box = $('ps-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+
+  async function loadPayslips() {
+    $('loading-text').textContent = 'กำลังโหลดสลิป…';
+    const r = await callEngine({ action: 'payslipList' });
+    if (!r.ok) { showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+    const list = $('ps-list');
+    list.innerHTML = '';
+    if (!r.months.length) {
+      const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'ไม่มีข้อมูล';
+      list.append(li);
+    }
+    r.months.forEach(m => {
+      const li = document.createElement('li');
+      const name = document.createElement('div'); name.className = 'slip-month'; name.textContent = thaiMonth(m.month);
+      li.append(name);
+      if (m.status === 'ready') {
+        const b = document.createElement('button'); b.className = 'sm'; b.textContent = 'ดาวน์โหลด';
+        b.addEventListener('click', () => downloadPayslip(m.month, b));
+        li.append(b);
+      } else {
+        const pill = document.createElement('span'); pill.className = 'pill pending'; pill.textContent = 'กำลังดำเนินการ';
+        li.append(pill);
+      }
+      list.append(li);
+    });
+    psError('');
+    show('s-payslip');
+  }
+
+  // The PDF lock library loads only when someone opens the payslip screen.
+  let lockReady = null;
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = reject;
+      document.head.append(s);
+    });
+  }
+  function pdfTools() {
+    if (!lockReady) lockReady = loadScript('pdf-lib.min.js').then(() => loadScript('pdflock.js'));
+    return lockReady;
+  }
+
+  // Phones with a share sheet (iPhone, most Android) save through it; others download directly.
+  // Returns 'again' when the phone wants a fresh tap before it opens the share sheet.
+  async function saveFile(file) {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: file.name }); return 'done'; }
+      catch (e) { return e && e.name === 'NotAllowedError' ? 'again' : 'done'; }
+    }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return 'done';
+  }
+
+  const prepared = {};   // month -> locked file, kept only while this screen is open
+
+  async function downloadPayslip(month, btn) {
+    psError('');
+    if (prepared[month]) {
+      await saveFile(prepared[month]);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'กำลังเตรียม…';
+    try {
+      const [r] = await Promise.all([callEngine({ action: 'payslipGet', month }), pdfTools()]);
+      if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
+      if (!r.ok) { psError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); btn.textContent = 'ดาวน์โหลด'; return; }
+      const raw = Uint8Array.from(atob(r.data), c => c.charCodeAt(0));
+      const locked = await PdfLock.lock(raw, r.password);
+      prepared[month] = new File([locked], r.fileName, { type: 'application/pdf' });
+      const result = await saveFile(prepared[month]);
+      btn.textContent = result === 'again' ? 'บันทึกไฟล์' : 'ดาวน์โหลด';
+    } catch (err) {
+      psError('ดาวน์โหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      btn.textContent = 'ดาวน์โหลด';
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
   fillDateSelects();
   start();
