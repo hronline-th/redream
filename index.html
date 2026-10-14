@@ -312,8 +312,8 @@
         <select id="dc-purpose"></select>
 
         <div id="dc-other-wrap" hidden>
-          <label for="dc-other">ระบุวัตถุประสงค์</label>
-          <input type="text" id="dc-other" maxlength="150" placeholder="เช่น ยื่นประกอบการสมัครงานพิเศษ">
+          <label for="dc-other" id="dc-other-label">ระบุวัตถุประสงค์</label>
+          <input type="text" id="dc-other" maxlength="150" placeholder="โปรดระบุวัตถุประสงค์">
         </div>
 
         <div class="note" id="dc-salary" hidden></div>
@@ -377,7 +377,7 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
-  <p class="ver">HR onLine · v0.4.0</p>
+  <p class="ver">HR onLine · v0.4.1</p>
 </main>
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -849,6 +849,12 @@
 
     const p = docPurposes.find(x => x.code === $('dc-purpose').value);
     $('dc-other-wrap').hidden = !(p && p.needsText);
+    if (p && p.needsText) {
+      if ($('dc-other').dataset.for !== p.code) $('dc-other').value = '';
+      $('dc-other').dataset.for = p.code;
+      $('dc-other-label').textContent = p.textLabel || 'ระบุวัตถุประสงค์';
+      $('dc-other').placeholder = p.textPlaceholder || '';
+    }
 
     let salary = '';
     if (t && t.salaryRule === 'always') salary = 'yes';
@@ -876,7 +882,7 @@
     if (!d.language) return MESSAGES.LANGUAGE_REQUIRED;
     if (!d.purpose) return MESSAGES.PURPOSE_REQUIRED;
     const p = docPurposes.find(x => x.code === d.purpose);
-    if (p && p.needsText && !d.purposeText) return MESSAGES.OTHER_TEXT_REQUIRED;
+    if (p && p.needsText && !d.purposeText) return 'กรุณา' + (p.textLabel || 'ระบุวัตถุประสงค์');
     return '';
   }
 
@@ -908,6 +914,8 @@
         askRepeat(d.type, r.last);
       } else if (r.code === 'LINE_AUTH_FAILED') {
         liff.logout(); liff.login();
+      } else if (r.code === 'OTHER_TEXT_REQUIRED' && r.label) {
+        dcError('กรุณา' + r.label);
       } else {
         dcError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
       }
