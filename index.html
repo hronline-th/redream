@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HR onLine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://api.line.me">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
   :root {
     --brand: #2F74D9;
@@ -377,7 +380,7 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
-  <p class="ver">HR onLine · v0.4.1</p>
+  <p class="ver">HR onLine · v0.4.2</p>
 </main>
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -472,6 +475,14 @@
     return res.json();
   }
 
+  // Shared handling when a screen's first call is refused.
+  function notOk(r) {
+    if (r.code === 'NOT_REGISTERED') return r;
+    if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return r; }
+    showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
+    return r;
+  }
+
   function fillDateSelects() {
     const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -506,21 +517,24 @@
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
 
+      const page = currentPage();
+      // Screens with their own data ask the engine once; "not registered" sends the person to registration.
+      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips };
+      if (PAGES[page].ready && loaders[page]) {
+        $('loading-text').textContent = 'กำลังโหลด…';
+        const r = await loaders[page]();
+        if (r && r.code === 'NOT_REGISTERED') show('s-consent');
+        return;
+      }
+
       $('loading-text').textContent = 'กำลังตรวจสอบบัญชี…';
       const status = await callEngine({ action: 'status' });
 
       if (status.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
       if (!status.ok) { showError(MESSAGES[status.code] || MESSAGES.SERVER_ERROR); return; }
 
-      const page = currentPage();
       if (status.registered && !PAGES[page].ready) {
         showSoon(page);
-      } else if (status.registered && page === 'leave') {
-        await loadLeave();
-      } else if (status.registered && page === 'documents') {
-        await loadDocs();
-      } else if (status.registered && page === 'payslip') {
-        await loadPayslips();
       } else if (status.registered) {
         showDone('สวัสดีคุณ' + (status.name || ''), 'บัญชี LINE ของคุณลงทะเบียนเรียบร้อยแล้ว');
       } else {
@@ -595,7 +609,7 @@
   async function loadLeave() {
     $('loading-text').textContent = 'กำลังโหลดวันลา…';
     const r = await callEngine({ action: 'leaveInfo' });
-    if (!r.ok) { showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+    if (!r.ok) return notOk(r);
     leaveTypes = r.types;
 
     $('lv-year').textContent = 'วันลาคงเหลือปี ' + (r.year + 543);
@@ -800,7 +814,7 @@
   async function loadDocs() {
     $('loading-text').textContent = 'กำลังโหลด…';
     const r = await callEngine({ action: 'docInfo' });
-    if (!r.ok) { showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+    if (!r.ok) return notOk(r);
     docTypes = r.types; docPurposes = r.purposes; docRecent = r.recent || {};
 
     const ts = $('dc-type');
@@ -949,7 +963,7 @@
   async function loadPayslips() {
     $('loading-text').textContent = 'กำลังโหลดสลิป…';
     const r = await callEngine({ action: 'payslipList' });
-    if (!r.ok) { showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+    if (!r.ok) return notOk(r);
     const list = $('ps-list');
     list.innerHTML = '';
     if (!r.months.length) {
