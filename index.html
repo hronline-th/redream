@@ -162,6 +162,8 @@
   button.sm { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; border-radius: 10px; flex: none; align-self: center; }
   .slips li { align-items: center; }
   .slip-month { font-weight: 500; }
+  /* registration code: letters spaced out and easy to read */
+  #regcode { font-size: 20px; letter-spacing: .12em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -226,6 +228,10 @@
 
       <label for="last4">เลขบัตรประชาชน (หรือพาสปอร์ต) 4 ตัวท้าย</label>
       <input id="last4" type="text" inputmode="text" autocomplete="off" maxlength="4" placeholder="เช่น 1234">
+
+      <label for="regcode">รหัสลงทะเบียน</label>
+      <input id="regcode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="9" placeholder="เช่น ABCD-EFGH">
+      <p class="hint">ขอรหัสจากฝ่ายบุคคล ใช้ได้ครั้งเดียวและมีอายุจำกัด ห้ามบอกรหัสนี้กับผู้อื่น</p>
 
       <div class="error" id="form-error"></div>
       <button id="btn-submit">ลงทะเบียน</button>
@@ -380,7 +386,7 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
-  <p class="ver">HR onLine · v0.4.2</p>
+  <p class="ver">HR onLine · v0.5.0</p>
 </main>
 
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -390,13 +396,17 @@
   const ENGINE_URL = 'https://script.google.com/macros/s/AKfycbyNNtaCsvEDdfHhqJsHuyx1DnXZft2X5tfjS9c1ghWH-hNCmb-i2WTX7h2GujhpZqY7/exec';
 
   const MESSAGES = {
-    NOT_MATCHED: 'ข้อมูลไม่ตรงกับรายชื่อพนักงาน กรุณาตรวจสอบอีกครั้ง',
-    TOO_MANY_ATTEMPTS: 'กรอกข้อมูลผิดหลายครั้งเกินไป กรุณาลองใหม่ในอีก 6 ชั่วโมง หรือติดต่อฝ่ายบุคคล',
-    INVALID_INPUT: 'กรุณากรอกข้อมูลให้ครบและถูกต้อง',
+    // One message for every registration failure, so nobody can tell which part was wrong.
+    NOT_MATCHED: 'ข้อมูลหรือรหัสลงทะเบียนไม่ถูกต้อง รหัสอาจหมดอายุหรือถูกใช้แล้ว กรุณาตรวจสอบอีกครั้ง หรือขอรหัสใหม่จากฝ่ายบุคคล',
+    TOO_MANY_ATTEMPTS: 'กรอกข้อมูลผิดหลายครั้งเกินไป กรุณาติดต่อฝ่ายบุคคล หรือลองใหม่ภายหลัง',
+    INVALID_INPUT: 'กรุณากรอกข้อมูลให้ครบและถูกต้อง รวมถึงรหัสลงทะเบียน 8 ตัว',
     CONSENT_REQUIRED: 'กรุณายินยอมตามประกาศความเป็นส่วนตัวก่อน',
     EMPLOYEE_ALREADY_LINKED: 'ข้อมูลพนักงานนี้เชื่อมกับบัญชี LINE อื่นแล้ว กรุณาติดต่อฝ่ายบุคคล',
     ALREADY_REGISTERED: 'บัญชี LINE นี้ลงทะเบียนแล้ว',
     SERVER_ERROR: 'ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง',
+    BUSY: 'ระบบมีผู้ใช้งานจำนวนมาก กรุณาลองใหม่อีกครั้งในอีกสักครู่',
+    BAD_REQUEST: 'ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+    DAILY_LIMIT: 'วันนี้ส่งคำขอครบจำนวนที่กำหนดแล้ว กรุณาติดต่อฝ่ายบุคคล หรือลองใหม่พรุ่งนี้',
     NOT_REGISTERED: 'กรุณาลงทะเบียนก่อน ที่เมนู "ข้อมูลของฉัน"',
     LEAVE_TYPE_NOT_ALLOWED: 'ประเภทการลานี้ยื่นเองไม่ได้ กรุณาติดต่อฝ่ายบุคคล',
     HALF_DAY_NOT_ALLOWED: 'ประเภทการลานี้ลาครึ่งวันไม่ได้',
@@ -505,6 +515,11 @@
     return ad + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
   }
 
+  // The registration code is typed as 8 letters/digits; a hyphen is added in the middle for readability.
+  function readCode() {
+    return $('regcode').value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  }
+
   function formError(text) {
     const box = $('form-error');
     box.textContent = text;
@@ -549,13 +564,18 @@
   $('btn-consent').addEventListener('click', () => show('s-form'));
   $('btn-back').addEventListener('click', () => { formError(''); show('s-consent'); });
   $('last4').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''); });
+  $('regcode').addEventListener('input', e => {
+    const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    e.target.value = v.length > 4 ? v.slice(0, 4) + '-' + v.slice(4) : v;
+  });
 
   $('btn-submit').addEventListener('click', async () => {
     formError('');
     const phone = $('phone').value.trim();
     const dob = readDob();
     const idLast4 = $('last4').value.trim();
-    if (phone.replace(/\D/g, '').length < 9 || !dob || idLast4.length !== 4) {
+    const code = readCode();
+    if (phone.replace(/\D/g, '').length < 9 || !dob || idLast4.length !== 4 || code.length !== 8) {
       formError(MESSAGES.INVALID_INPUT);
       return;
     }
@@ -563,15 +583,14 @@
     btn.disabled = true;
     btn.textContent = 'กำลังตรวจสอบ…';
     try {
-      const r = await callEngine({ action: 'register', phone, dob, idLast4, consent: $('consent').checked });
+      const r = await callEngine({ action: 'register', phone, dob, idLast4, code, consent: $('consent').checked });
       if (r.ok) {
+        $('regcode').value = '';
         showDone('ลงทะเบียนสำเร็จ', 'ยินดีต้อนรับคุณ' + (r.name || '') + ' บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว');
       } else if (r.code === 'LINE_AUTH_FAILED') {
         liff.logout(); liff.login();
       } else {
-        let msg = MESSAGES[r.code] || MESSAGES.SERVER_ERROR;
-        if (r.code === 'NOT_MATCHED' && typeof r.attemptsLeft === 'number') msg += ' (เหลือ ' + r.attemptsLeft + ' ครั้ง)';
-        formError(msg);
+        formError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
       }
     } catch (err) {
       formError(MESSAGES.NETWORK);
