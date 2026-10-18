@@ -198,6 +198,27 @@
   .rs-day.today { background: #EAF2FF; outline: 2px solid var(--brand); outline-offset: -2px; }
   .rs-day.sun .dt span, .rs-day.sat .dt span { color: #B45309; }
   .rs-event { font-size: 12px; background: #FFF4D6; color: #7A5600; padding: 1px 8px; border-radius: 6px; display: inline-block; margin-top: 2px; }
+  .rs-tabs { display: flex; gap: 8px; }
+  .rs-tabs button { margin: 0; padding: 12px; background: #fff; color: var(--brand); border: 1px solid var(--brand); }
+  .rs-tabs button.on { background: var(--brand); color: #fff; }
+  .rs-strip { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; margin: 0 -4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .rs-strip::-webkit-scrollbar { display: none; }
+  .rs-strip button { flex: none; width: 52px; margin: 0; padding: 8px 0; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 12px; font-weight: 500; line-height: 1.25; }
+  .rs-strip button small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+  .rs-strip button b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .rs-strip button.wkend small { color: #B45309; }
+  .rs-strip button.today { border: 2px solid var(--brand); }
+  .rs-strip button.sel { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .rs-strip button.sel small { color: #fff; opacity: .9; }
+  .rs-daytitle { font-weight: 600; margin: 4px 0 6px; }
+  .rs-group { padding: 10px 0; border-top: 1px solid var(--line); }
+  .rs-group:first-of-type { border-top: 0; }
+  .rs-group h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+  .rs-group h3 span { font-weight: 400; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .rs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rs-chip { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 14px; }
+  .rs-chip.me { background: #EAF2FF; border-color: var(--brand); color: var(--brand-dark); font-weight: 600; }
+  .rs-group.muted-g h3 { color: var(--muted); font-weight: 500; }
   /* timing readout: only with ?debug=1 */
   #debug { margin: 16px 0 0; padding: 10px 12px; border: 1px dashed var(--muted); border-radius: 10px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; word-break: break-all; }
 </style>
@@ -414,14 +435,30 @@
         </div>
         <div class="error" id="rs-error"></div>
       </div>
-      <div class="rs-next" id="rs-nextshift" hidden></div>
-      <div class="card">
-        <div class="rs-tot" id="rs-totals"></div>
+      <div class="rs-tabs" id="rs-tabs">
+        <button id="rs-tab-team" class="on">ทั้งร้าน</button>
+        <button id="rs-tab-me">ของฉัน</button>
       </div>
-      <div class="card">
-        <div id="rs-days"></div>
-        <p class="hint">ตารางนี้จัดโดยหัวหน้างาน หากมีการเปลี่ยนแปลง ข้อมูลจะอัปเดตภายในไม่กี่นาที</p>
+
+      <div id="rs-team" class="stack">
+        <div class="card">
+          <div class="rs-strip" id="rs-strip"></div>
+          <div class="rs-daytitle" id="rs-daytitle"></div>
+          <div id="rs-groups"></div>
+          <div class="note" id="rs-nomatch" hidden>ไม่พบชื่อของคุณในตารางงานเดือนนี้ หากเป็นความผิดพลาด กรุณาแจ้งฝ่ายบุคคล</div>
+        </div>
       </div>
+
+      <div id="rs-me" class="stack" hidden>
+        <div class="rs-next" id="rs-nextshift" hidden></div>
+        <div class="card">
+          <div class="rs-tot" id="rs-totals"></div>
+        </div>
+        <div class="card">
+          <div id="rs-days"></div>
+        </div>
+      </div>
+      <p class="hint center">ตารางนี้จัดโดยหัวหน้างาน หากมีการเปลี่ยนแปลง ข้อมูลจะอัปเดตภายในไม่กี่นาที</p>
     </div>
   </section>
 
@@ -449,7 +486,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.6.1</p>
+  <p class="ver">HR onLine · v0.6.2</p>
 </main>
 
 <script>
@@ -1068,7 +1105,10 @@
 
   /* ---------- Roster ---------- */
   const DOW_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const MON_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
   let rosterData = null;
+  let rsSel = 0;
+  let rsTab = 'team';
 
   function rsError(text) {
     const box = $('rs-error');
@@ -1085,25 +1125,91 @@
     return '';
   }
 
-  function drawRoster(r) {
-    rosterData = r;
-    $('rs-month').textContent = r.monthLabel;
-    const at = r.months.indexOf(r.month);
-    $('rs-prev').disabled = at <= 0;
-    $('rs-next').disabled = at < 0 || at >= r.months.length - 1;
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
 
-    // next shift: today or later, first working day
-    const nextWork = r.days.find(d => d.kind === 'work' && d.d >= r.today);
+  function setRsTab(tab) {
+    rsTab = tab === 'me' && rosterData && rosterData.mine ? 'me' : 'team';
+    $('rs-tab-team').classList.toggle('on', rsTab === 'team');
+    $('rs-tab-me').classList.toggle('on', rsTab === 'me');
+    $('rs-team').hidden = rsTab !== 'team';
+    $('rs-me').hidden = rsTab !== 'me';
+    if (rsTab === 'me') {
+      const t = document.querySelector('#rs-days .rs-day.today');
+      if (t && t.scrollIntoView) t.scrollIntoView({ block: 'center' });
+    }
+  }
+
+  // The whole store on one day: who works which shift, who is off, who is on leave.
+  function drawTeamDay() {
+    const r = rosterData;
+    const i = rsSel;
+    const dt = r.dates[i];
+    const [y, m, d] = dt.d.split('-').map(Number);
+    $('rs-daytitle').textContent = (dayWord(dt.d, r.today) ? dayWord(dt.d, r.today) + ' · ' : '') + DOW_TH[dt.dow] + ' ' + d + ' ' + MON_TH[m - 1] + (dt.event ? ' · ' + dt.event : '');
+
+    document.querySelectorAll('#rs-strip button').forEach((b, k) => b.classList.toggle('sel', k === i));
+
+    const work = {}, off = [], leave = [], none = [];
+    r.people.forEach(p => {
+      const c = p.c[i];
+      if (!c) none.push(p);
+      else if (c === 'OFF') off.push(p);
+      else if (c === 'L') leave.push(p);
+      else (work[c] = work[c] || []).push(p);
+    });
+    const codes = Object.keys(work).sort((a, b) => {
+      const sa = r.defs[a] ? r.defs[a].start : '99:99', sb = r.defs[b] ? r.defs[b].start : '99:99';
+      return sa < sb ? -1 : sa > sb ? 1 : (a < b ? -1 : 1);
+    });
+
+    const box = $('rs-groups');
+    box.innerHTML = '';
+    const addGroup = (title, note, people, cls) => {
+      const g = el('div', 'rs-group' + (cls ? ' ' + cls : ''));
+      const h3 = el('h3', '', title);
+      h3.append(el('span', '', note));
+      const chips = el('div', 'rs-chips');
+      people.slice().sort((a, b) => (b.me ? 1 : 0) - (a.me ? 1 : 0)).forEach(p => chips.append(el('span', 'rs-chip' + (p.me ? ' me' : ''), p.nick + (p.me ? ' (คุณ)' : ''))));
+      g.append(h3, chips);
+      box.append(g);
+    };
+    codes.forEach(c => {
+      const def = r.defs[c];
+      addGroup(c + (def ? ' · ' + def.start + '–' + def.end : ''), work[c].length + ' คน', work[c]);
+    });
+    if (off.length) addGroup('วันหยุด', off.length + ' คน', off, 'muted-g');
+    if (leave.length) addGroup('ลา', leave.length + ' คน', leave, 'muted-g');
+    if (!codes.length && !off.length && !leave.length) {
+      box.append(el('p', 'empty', 'ยังไม่มีการจัดตารางของวันนี้'));
+    }
+  }
+
+  function drawStrip() {
+    const r = rosterData;
+    const strip = $('rs-strip');
+    strip.innerHTML = '';
+    r.dates.forEach((dt, k) => {
+      const b = el('button', (dt.d === r.today ? 'today ' : '') + ((dt.dow === 0 || dt.dow === 6) ? 'wkend' : ''));
+      b.append(el('small', '', DOW_TH[dt.dow]), el('b', '', String(Number(dt.d.slice(8, 10)))));
+      b.addEventListener('click', () => { rsSel = k; drawTeamDay(); });
+      strip.append(b);
+    });
+  }
+
+  function drawMine(r) {
     const box = $('rs-nextshift');
     box.innerHTML = '';
+    const nextWork = r.days.find(d => d.kind === 'work' && d.d >= r.today);
     if (nextWork) {
-      const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = 'กะถัดไป';
-      const big = document.createElement('div'); big.className = 'big';
       const [y, m, dd] = nextWork.d.split('-').map(Number);
-      big.textContent = (dayWord(nextWork.d, r.today) || (DOW_TH[nextWork.dow] + ' ' + dd + '/' + m));
-      const sub = document.createElement('div'); sub.className = 'sub';
-      sub.textContent = nextWork.label + (shiftTime(nextWork) ? ' · ' + shiftTime(nextWork) : '');
-      box.append(lbl, big, sub);
+      const big = el('div', 'big', dayWord(nextWork.d, r.today) || (DOW_TH[nextWork.dow] + ' ' + dd + '/' + m));
+      const sub = el('div', 'sub', nextWork.label + (shiftTime(nextWork) ? ' · ' + shiftTime(nextWork) : ''));
+      box.append(el('div', 'lbl', 'กะถัดไปของคุณ'), big, sub);
       box.hidden = false;
     } else {
       box.hidden = true;
@@ -1112,36 +1218,45 @@
     const tot = $('rs-totals');
     tot.innerHTML = '';
     [['วันทำงาน', r.totals.work], ['วันหยุด', r.totals.off], ['วันลา', r.totals.leave]].forEach(([name, n]) => {
-      const item = document.createElement('div'); item.className = 'bal-item';
-      const a = document.createElement('div'); a.className = 'bal-name'; a.textContent = name;
-      const b = document.createElement('div'); b.className = 'bal-num'; b.textContent = String(n);
-      item.append(a, b);
+      const item = el('div', 'bal-item');
+      item.append(el('div', 'bal-name', name), el('div', 'bal-num', String(n)));
       tot.append(item);
     });
 
     const list = $('rs-days');
     list.innerHTML = '';
-    let todayRow = null;
     r.days.forEach(d => {
-      const row = document.createElement('div');
-      row.className = 'rs-day ' + d.kind + (d.d === r.today ? ' today' : '') + (d.dow === 0 ? ' sun' : '') + (d.dow === 6 ? ' sat' : '');
-      const dt = document.createElement('div'); dt.className = 'dt';
-      const num = document.createElement('b'); num.textContent = String(Number(d.d.slice(8, 10)));
-      const dow = document.createElement('span'); dow.textContent = DOW_TH[d.dow];
-      dt.append(num, dow);
-      const what = document.createElement('div'); what.className = 'what';
-      const main = document.createElement('b');
-      main.textContent = d.kind === 'empty' ? '–' : d.label;
-      what.append(main);
-      if (d.kind === 'work' && shiftTime(d)) { const s = document.createElement('small'); s.textContent = shiftTime(d); what.append(s); }
-      if (d.event) { const ev = document.createElement('span'); ev.className = 'rs-event'; ev.textContent = d.event; what.append(document.createElement('br'), ev); }
-      row.append(dt, what);
+      const row = el('div', 'rs-day ' + d.kind + (d.d === r.today ? ' today' : '') + (d.dow === 0 ? ' sun' : '') + (d.dow === 6 ? ' sat' : ''));
+      const dtc = el('div', 'dt');
+      dtc.append(el('b', '', String(Number(d.d.slice(8, 10)))), el('span', '', DOW_TH[d.dow]));
+      const what = el('div', 'what');
+      what.append(el('b', '', d.kind === 'empty' ? '–' : d.label));
+      if (d.kind === 'work' && shiftTime(d)) what.append(el('small', '', shiftTime(d)));
+      if (d.event) { what.append(document.createElement('br'), el('span', 'rs-event', d.event)); }
+      row.append(dtc, what);
       list.append(row);
-      if (d.d === r.today) todayRow = row;
     });
+  }
+
+  function drawRoster(r, keepDay) {
+    rosterData = r;
+    $('rs-month').textContent = r.monthLabel;
+    const at = r.months.indexOf(r.month);
+    $('rs-prev').disabled = at <= 0;
+    $('rs-next').disabled = at < 0 || at >= r.months.length - 1;
+
+    const todayAt = r.dates.findIndex(x => x.d === r.today);
+    rsSel = keepDay !== undefined ? Math.min(keepDay, r.dates.length - 1) : (todayAt >= 0 ? todayAt : 0);
+    drawStrip();
+    drawTeamDay();
+    $('rs-nomatch').hidden = r.mine;
+    $('rs-tab-me').hidden = !r.mine;
+    if (r.mine) drawMine(r);
     rsError('');
     show('s-roster');
-    if (todayRow && todayRow.scrollIntoView) todayRow.scrollIntoView({ block: 'center' });
+    setRsTab(rsTab);
+    const sel = document.querySelector('#rs-strip button.sel');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
 
   async function loadRoster(month) {
@@ -1156,20 +1271,23 @@
     if (!rosterData) return;
     const at = rosterData.months.indexOf(rosterData.month) + step;
     if (at < 0 || at >= rosterData.months.length) return;
+    const previous = rosterData;
     $('rs-prev').disabled = true; $('rs-next').disabled = true;
     $('rs-month').textContent = 'กำลังโหลด…';
     try {
       const r = await callEngine({ action: 'rosterGet', month: rosterData.months[at] });
       if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
-      if (!r.ok) { rsError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); drawRoster(rosterData); return; }
+      if (!r.ok) { rsError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); drawRoster(previous, rsSel); return; }
       drawRoster(r);
     } catch (err) {
       rsError(MESSAGES.NETWORK);
-      drawRoster(rosterData);
+      drawRoster(previous, rsSel);
     }
   }
   $('rs-prev').addEventListener('click', () => moveRoster(-1));
   $('rs-next').addEventListener('click', () => moveRoster(1));
+  $('rs-tab-team').addEventListener('click', () => setRsTab('team'));
+  $('rs-tab-me').addEventListener('click', () => setRsTab('me'));
 
   function psError(text) {
     const box = $('ps-error');
