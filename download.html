@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>HR onLine · ดาวน์โหลดสลิป</title>
+<style>
+  :root { --brand: #2F74D9; --bg: #F2F7FF; --text: #17263F; --muted: #5A6B8A; --line: #D9E5F7; --error: #B42318; --error-bg: #FEF3F2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, "IBM Plex Sans Thai", sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
+  header { background: var(--brand); color: #fff; padding: 20px 16px 18px; font-weight: 600; font-size: 20px; }
+  main { padding: 16px; max-width: 480px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 14px; padding: 20px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  button { width: 100%; font: inherit; font-weight: 600; padding: 14px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--brand); color: #fff; cursor: pointer; }
+  button:disabled { background: #A8C4EE; }
+  .error { background: var(--error-bg); color: var(--error); border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 14px; }
+  .note { background: #EEF5FF; color: #1E3A6B; border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 14px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>HR onLine</header>
+<main>
+  <div class="card">
+    <h1 id="title">สลิปเงินเดือน</h1>
+    <p class="muted" id="status">กำลังเตรียมไฟล์…</p>
+    <button id="save" hidden>บันทึกไฟล์</button>
+    <div class="note" id="pw" hidden>รหัสผ่านเปิดไฟล์คือวันเกิดของคุณ แบบ ค.ศ. 8 หลัก เช่น เกิดวันที่ 24 มีนาคม 1998 คือ 19980324</div>
+    <div class="error" id="err" hidden></div>
+  </div>
+</main>
+
+<script>
+  // Opens in the phone's own browser. The only thing it holds is a single-use ticket that expires in 90 seconds.
+  const ENGINE_URL = 'https://script.google.com/macros/s/AKfycbyNNtaCsvEDdfHhqJsHuyx1DnXZft2X5tfjS9c1ghWH-hNCmb-i2WTX7h2GujhpZqY7/exec';
+  const $ = id => document.getElementById(id);
+  const MESSAGES = {
+    TICKET_INVALID: 'ลิงก์ดาวน์โหลดหมดอายุหรือถูกใช้แล้ว กรุณากลับไปที่ LINE แล้วกดดาวน์โหลดอีกครั้ง',
+    PAYSLIP_NOT_AVAILABLE: 'สลิปเดือนนี้ยังไม่พร้อม',
+    PAYSLIP_PROBLEM: 'ยังดาวน์โหลดสลิปเดือนนี้ไม่ได้ ฝ่ายบุคคลได้รับแจ้งแล้ว',
+    DOB_MISSING: 'ไม่พบวันเกิดในระบบ กรุณาติดต่อ HR',
+    NOT_REGISTERED: 'กรุณาลงทะเบียนก่อน ที่เมนู "ข้อมูลของฉัน" ใน LINE',
+    BUSY: 'ระบบมีผู้ใช้งานจำนวนมาก กรุณาลองใหม่อีกครั้งในอีกสักครู่',
+    NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต แล้วกลับไปกดดาวน์โหลดใน LINE อีกครั้ง',
+    SERVER_ERROR: 'ระบบขัดข้องชั่วคราว กรุณากลับไปกดดาวน์โหลดใน LINE อีกครั้ง'
+  };
+
+  function fail(code) {
+    $('status').hidden = true;
+    $('err').textContent = MESSAGES[code] || MESSAGES.SERVER_ERROR;
+    $('err').hidden = false;
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = reject;
+      document.head.append(s);
+    });
+  }
+
+  function saveFile(file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  (async function () {
+    const m = location.hash.match(/^#t=([0-9a-f]{64})$/);
+    // The ticket is read once and removed from the address bar and history.
+    history.replaceState(null, '', location.pathname);
+    if (!m) { fail('TICKET_INVALID'); return; }
+    try {
+      const [res] = await Promise.all([
+        fetch(ENGINE_URL, { method: 'POST', body: JSON.stringify({ action: 'payslipRedeem', ticket: m[1] }) }).then(r => r.json()),
+        loadScript('pdf-lib.min.js').then(() => loadScript('pdflock.js'))
+      ]);
+      if (!res.ok) { fail(res.code); return; }
+      const raw = Uint8Array.from(atob(res.data), c => c.charCodeAt(0));
+      const locked = await PdfLock.lock(raw, res.password);
+      const file = new File([locked], res.fileName, { type: 'application/pdf' });
+      $('status').textContent = 'ไฟล์พร้อมแล้ว: ' + res.fileName;
+      $('save').hidden = false;
+      $('pw').hidden = false;
+      $('save').addEventListener('click', () => saveFile(file));
+      saveFile(file);
+    } catch (err) {
+      fail('NETWORK');
+    }
+  })();
+</script>
+</body>
+</html>

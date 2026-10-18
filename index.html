@@ -175,6 +175,29 @@
   .sk-bar.w80 { width: 80%; }
   @keyframes shimmer { to { background-position: -200% 0; } }
   @media (prefers-reduced-motion: reduce) { .sk-bar { animation: none; } }
+  /* roster */
+  .rs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .rs-head h1 { margin: 0; text-align: center; flex: 1; font-size: 18px; }
+  .rs-head button { margin: 0; width: 44px; height: 44px; padding: 0; font-size: 20px; line-height: 1; border-radius: 12px; flex: none; }
+  .rs-next { background: var(--brand); color: #fff; border-radius: 14px; padding: 16px; }
+  .rs-next .lbl { font-size: 13px; opacity: .85; }
+  .rs-next .big { font-size: 24px; font-weight: 600; line-height: 1.3; }
+  .rs-next .sub { font-size: 15px; opacity: .95; }
+  .rs-tot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .rs-day { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--line); border-radius: 10px; }
+  .rs-day:last-child { border-bottom: 0; }
+  .rs-day .dt { width: 46px; text-align: center; flex: none; line-height: 1.2; }
+  .rs-day .dt b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .rs-day .dt span { font-size: 12px; color: var(--muted); }
+  .rs-day .what { flex: 1; min-width: 0; }
+  .rs-day .what b { font-weight: 600; }
+  .rs-day .what small { display: block; font-size: 13px; color: var(--muted); }
+  .rs-day.off .what b { color: var(--muted); font-weight: 500; }
+  .rs-day.leave .what b { color: #8A5300; }
+  .rs-day.empty .what b { color: #9AA8C2; font-weight: 400; }
+  .rs-day.today { background: #EAF2FF; outline: 2px solid var(--brand); outline-offset: -2px; }
+  .rs-day.sun .dt span, .rs-day.sat .dt span { color: #B45309; }
+  .rs-event { font-size: 12px; background: #FFF4D6; color: #7A5600; padding: 1px 8px; border-radius: 6px; display: inline-block; margin-top: 2px; }
   /* timing readout: only with ?debug=1 */
   #debug { margin: 16px 0 0; padding: 10px 12px; border: 1px dashed var(--muted); border-radius: 10px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; word-break: break-all; }
 </style>
@@ -371,10 +394,33 @@
         <p class="muted">6 เดือนล่าสุด</p>
         <ul class="hist slips" id="ps-list"></ul>
         <div class="error" id="ps-error"></div>
+        <div class="note" id="ps-note" hidden></div>
       </div>
       <div class="card">
         <h2>รหัสผ่านสำหรับเปิดไฟล์</h2>
         <p class="muted" style="margin:0">ไฟล์สลิปล็อกด้วยวันเกิดของคุณ แบบ ปี ค.ศ. เดือน วัน รวม 8 หลัก เช่น เกิดวันที่ 24 มีนาคม 1998 รหัสผ่านคือ 19980324</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roster -->
+  <section id="s-roster" class="screen">
+    <div class="stack">
+      <div class="card">
+        <div class="rs-head">
+          <button class="secondary" id="rs-prev" aria-label="เดือนก่อนหน้า">‹</button>
+          <h1 id="rs-month">ตารางงาน</h1>
+          <button class="secondary" id="rs-next" aria-label="เดือนถัดไป">›</button>
+        </div>
+        <div class="error" id="rs-error"></div>
+      </div>
+      <div class="rs-next" id="rs-nextshift" hidden></div>
+      <div class="card">
+        <div class="rs-tot" id="rs-totals"></div>
+      </div>
+      <div class="card">
+        <div id="rs-days"></div>
+        <p class="hint">ตารางนี้จัดโดยหัวหน้างาน หากมีการเปลี่ยนแปลง ข้อมูลจะอัปเดตภายในไม่กี่นาที</p>
       </div>
     </div>
   </section>
@@ -403,7 +449,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.6.0</p>
+  <p class="ver">HR onLine · v0.6.1</p>
 </main>
 
 <script>
@@ -460,6 +506,9 @@
     PAYSLIP_NOT_AVAILABLE: 'สลิปเดือนนี้ยังไม่พร้อม',
     PAYSLIP_PROBLEM: 'ยังดาวน์โหลดสลิปเดือนนี้ไม่ได้ ฝ่ายบุคคลได้รับแจ้งแล้ว',
     DOB_MISSING: 'ไม่พบวันเกิดในระบบ กรุณาติดต่อ HR',
+    ROSTER_NOT_READY: 'ยังไม่มีตารางงานของเดือนนี้ กรุณาติดต่อหัวหน้างานหรือฝ่ายบุคคล',
+    ROSTER_NO_MATCH: 'ไม่พบชื่อของคุณในตารางงานเดือนนี้ กรุณาแจ้งฝ่ายบุคคล',
+    ROSTER_UNAVAILABLE: 'เปิดตารางงานไม่ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง หรือแจ้งฝ่ายบุคคล',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
@@ -467,7 +516,7 @@
   const PAGES = {
     clockin:   { name: 'ลงเวลา',         ready: false },
     leave:     { name: 'ลางาน',          ready: true },
-    roster:    { name: 'ตารางงาน',       ready: false },
+    roster:    { name: 'ตารางงาน',       ready: true },
     documents: { name: 'ขอเอกสาร',       ready: true },
     payslip:   { name: 'สลิปเงินเดือน',   ready: true },
     news:      { name: 'ประกาศ',         ready: false },
@@ -578,7 +627,7 @@
 
       const page = currentPage();
       // Screens with their own data ask the engine once; "not registered" sends the person to registration.
-      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips };
+      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster('') };
       if (PAGES[page].ready && loaders[page]) {
         $('loading-text').textContent = 'กำลังโหลด…';
         const r = await loaders[page]();
@@ -1017,6 +1066,111 @@
     return MONTHS_TH[m - 1] + ' ' + (y + 543);
   }
 
+  /* ---------- Roster ---------- */
+  const DOW_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  let rosterData = null;
+
+  function rsError(text) {
+    const box = $('rs-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+
+  function shiftTime(d) { return d.start && d.end ? d.start + '–' + d.end : ''; }
+
+  function dayWord(key, today) {
+    const diff = Math.round((Date.parse(key + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
+    if (diff === 0) return 'วันนี้';
+    if (diff === 1) return 'พรุ่งนี้';
+    return '';
+  }
+
+  function drawRoster(r) {
+    rosterData = r;
+    $('rs-month').textContent = r.monthLabel;
+    const at = r.months.indexOf(r.month);
+    $('rs-prev').disabled = at <= 0;
+    $('rs-next').disabled = at < 0 || at >= r.months.length - 1;
+
+    // next shift: today or later, first working day
+    const nextWork = r.days.find(d => d.kind === 'work' && d.d >= r.today);
+    const box = $('rs-nextshift');
+    box.innerHTML = '';
+    if (nextWork) {
+      const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = 'กะถัดไป';
+      const big = document.createElement('div'); big.className = 'big';
+      const [y, m, dd] = nextWork.d.split('-').map(Number);
+      big.textContent = (dayWord(nextWork.d, r.today) || (DOW_TH[nextWork.dow] + ' ' + dd + '/' + m));
+      const sub = document.createElement('div'); sub.className = 'sub';
+      sub.textContent = nextWork.label + (shiftTime(nextWork) ? ' · ' + shiftTime(nextWork) : '');
+      box.append(lbl, big, sub);
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+    }
+
+    const tot = $('rs-totals');
+    tot.innerHTML = '';
+    [['วันทำงาน', r.totals.work], ['วันหยุด', r.totals.off], ['วันลา', r.totals.leave]].forEach(([name, n]) => {
+      const item = document.createElement('div'); item.className = 'bal-item';
+      const a = document.createElement('div'); a.className = 'bal-name'; a.textContent = name;
+      const b = document.createElement('div'); b.className = 'bal-num'; b.textContent = String(n);
+      item.append(a, b);
+      tot.append(item);
+    });
+
+    const list = $('rs-days');
+    list.innerHTML = '';
+    let todayRow = null;
+    r.days.forEach(d => {
+      const row = document.createElement('div');
+      row.className = 'rs-day ' + d.kind + (d.d === r.today ? ' today' : '') + (d.dow === 0 ? ' sun' : '') + (d.dow === 6 ? ' sat' : '');
+      const dt = document.createElement('div'); dt.className = 'dt';
+      const num = document.createElement('b'); num.textContent = String(Number(d.d.slice(8, 10)));
+      const dow = document.createElement('span'); dow.textContent = DOW_TH[d.dow];
+      dt.append(num, dow);
+      const what = document.createElement('div'); what.className = 'what';
+      const main = document.createElement('b');
+      main.textContent = d.kind === 'empty' ? '–' : d.label;
+      what.append(main);
+      if (d.kind === 'work' && shiftTime(d)) { const s = document.createElement('small'); s.textContent = shiftTime(d); what.append(s); }
+      if (d.event) { const ev = document.createElement('span'); ev.className = 'rs-event'; ev.textContent = d.event; what.append(document.createElement('br'), ev); }
+      row.append(dt, what);
+      list.append(row);
+      if (d.d === r.today) todayRow = row;
+    });
+    rsError('');
+    show('s-roster');
+    if (todayRow && todayRow.scrollIntoView) todayRow.scrollIntoView({ block: 'center' });
+  }
+
+  async function loadRoster(month) {
+    $('loading-text').textContent = 'กำลังโหลดตารางงาน…';
+    const r = await callEngine({ action: 'rosterGet', month: month });
+    if (!r.ok) return notOk(r);
+    drawRoster(r);
+    return r;
+  }
+
+  async function moveRoster(step) {
+    if (!rosterData) return;
+    const at = rosterData.months.indexOf(rosterData.month) + step;
+    if (at < 0 || at >= rosterData.months.length) return;
+    $('rs-prev').disabled = true; $('rs-next').disabled = true;
+    $('rs-month').textContent = 'กำลังโหลด…';
+    try {
+      const r = await callEngine({ action: 'rosterGet', month: rosterData.months[at] });
+      if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
+      if (!r.ok) { rsError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); drawRoster(rosterData); return; }
+      drawRoster(r);
+    } catch (err) {
+      rsError(MESSAGES.NETWORK);
+      drawRoster(rosterData);
+    }
+  }
+  $('rs-prev').addEventListener('click', () => moveRoster(-1));
+  $('rs-next').addEventListener('click', () => moveRoster(1));
+
   function psError(text) {
     const box = $('ps-error');
     box.textContent = text;
@@ -1082,8 +1236,35 @@
 
   const prepared = {};   // month -> locked file, kept only while this screen is open
 
+  // LINE's browser on Android cannot save a file made by the page. There the engine gives a single-use ticket
+  // (90 seconds) and the page opens the phone's own browser, where download.html fetches and saves the file.
+  const DOWNLOAD_PAGE = 'https://hronline-th.github.io/redream/download.html';
+  function androidInLine() {
+    try { return /Android/i.test(navigator.userAgent) && liff.isInClient(); } catch (e) { return false; }
+  }
+
+  async function downloadOnAndroid(month, btn) {
+    btn.disabled = true;
+    btn.textContent = 'กำลังเปิด…';
+    try {
+      const r = await callEngine({ action: 'payslipTicket', month: month });
+      if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
+      if (!r.ok) { psError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); return; }
+      liff.openWindow({ url: DOWNLOAD_PAGE + '#t=' + r.ticket, external: true });
+      const note = $('ps-note');
+      note.textContent = 'เปิดหน้าดาวน์โหลดในเบราว์เซอร์ของมือถือแล้ว หากไม่ขึ้น ให้กดดาวน์โหลดอีกครั้ง';
+      note.hidden = false;
+    } catch (err) {
+      psError(MESSAGES.NETWORK);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'ดาวน์โหลด';
+    }
+  }
+
   async function downloadPayslip(month, btn) {
     psError('');
+    if (androidInLine()) { await downloadOnAndroid(month, btn); return; }
     if (prepared[month]) {
       await saveFile(prepared[month]);
       return;
