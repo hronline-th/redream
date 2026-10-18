@@ -212,7 +212,10 @@
   .rs-strip button.sel small { color: #fff; opacity: .9; }
   .rs-daytitle { font-weight: 600; margin: 4px 0 6px; }
   .rs-group { padding: 10px 0; border-top: 1px solid var(--line); }
-  .rs-group:first-of-type { border-top: 0; }
+  .rs-section + .rs-group { border-top: 0; }
+  .rs-section { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 14px 0 2px; padding: 6px 12px; background: var(--bg); border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--brand-dark); }
+  .rs-section:first-child { margin-top: 4px; }
+  .rs-section span { font-weight: 400; font-size: 13px; color: var(--muted); }
   .rs-group h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
   .rs-group h3 span { font-weight: 400; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .rs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -486,7 +489,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.6.2</p>
+  <p class="ver">HR onLine · v0.6.3</p>
 </main>
 
 <script>
@@ -1154,19 +1157,10 @@
 
     document.querySelectorAll('#rs-strip button').forEach((b, k) => b.classList.toggle('sel', k === i));
 
-    const work = {}, off = [], leave = [], none = [];
-    r.people.forEach(p => {
-      const c = p.c[i];
-      if (!c) none.push(p);
-      else if (c === 'OFF') off.push(p);
-      else if (c === 'L') leave.push(p);
-      else (work[c] = work[c] || []).push(p);
-    });
-    const codes = Object.keys(work).sort((a, b) => {
+    const byStart = (a, b) => {
       const sa = r.defs[a] ? r.defs[a].start : '99:99', sb = r.defs[b] ? r.defs[b].start : '99:99';
       return sa < sb ? -1 : sa > sb ? 1 : (a < b ? -1 : 1);
-    });
-
+    };
     const box = $('rs-groups');
     box.innerHTML = '';
     const addGroup = (title, note, people, cls) => {
@@ -1178,15 +1172,37 @@
       g.append(h3, chips);
       box.append(g);
     };
-    codes.forEach(c => {
-      const def = r.defs[c];
-      addGroup(c + (def ? ' · ' + def.start + '–' + def.end : ''), work[c].length + ' คน', work[c]);
-    });
-    if (off.length) addGroup('วันหยุด', off.length + ' คน', off, 'muted-g');
-    if (leave.length) addGroup('ลา', leave.length + ' คน', leave, 'muted-g');
-    if (!codes.length && !off.length && !leave.length) {
-      box.append(el('p', 'empty', 'ยังไม่มีการจัดตารางของวันนี้'));
-    }
+
+    // Full-time: everyone planned that day (shifts, days off, leave). Part-time: only those who work.
+    const section = (title, list, partTime) => {
+      const work = {}, off = [], leave = [];
+      list.forEach(p => {
+        const c = p.c[i];
+        if (!c) return;
+        if (c === 'OFF') off.push(p);
+        else if (c === 'L') leave.push(p);
+        else (work[c] = work[c] || []).push(p);
+      });
+      const codes = Object.keys(work).sort(byStart);
+      const working = codes.reduce((n, c) => n + work[c].length, 0);
+      const head = el('div', 'rs-section', title);
+      head.append(el('span', '', working + ' คนทำงาน'));
+      box.append(head);
+      codes.forEach(c => {
+        const def = r.defs[c];
+        addGroup(c + (def ? ' · ' + def.start + '–' + def.end : ''), work[c].length + ' คน', work[c]);
+      });
+      if (!partTime) {
+        if (off.length) addGroup('วันหยุด', off.length + ' คน', off, 'muted-g');
+        if (leave.length) addGroup('ลา', leave.length + ' คน', leave, 'muted-g');
+      }
+      if (!codes.length && (partTime || (!off.length && !leave.length))) {
+        box.append(el('p', 'empty', partTime ? 'ไม่มีพาร์ทไทม์เข้างานวันนี้' : 'ยังไม่มีการจัดตารางของวันนี้'));
+      }
+    };
+    const full = r.people.filter(p => !p.pt), part = r.people.filter(p => p.pt);
+    section('Full-time', full, false);
+    if (part.length) section('Part-time', part, true);
   }
 
   function drawStrip() {
