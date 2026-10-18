@@ -8,6 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://api.line.me">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="preconnect" href="https://static.line-scdn.net">
+<link rel="preconnect" href="https://access.line.me">
+<link rel="preload" href="https://static.line-scdn.net/liff/edge/2/sdk.js" as="script">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
   :root {
@@ -164,6 +168,15 @@
   .slip-month { font-weight: 500; }
   /* registration code: letters spaced out and easy to read */
   #regcode { font-size: 20px; letter-spacing: .12em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+  /* loading frame: names the page at once, then the real content replaces it */
+  .sk-title { margin: 0 0 14px; }
+  .sk-bar { height: 14px; border-radius: 7px; margin: 12px 0; background: linear-gradient(90deg, var(--line) 25%, #EAF1FC 50%, var(--line) 75%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+  .sk-bar.w60 { width: 60%; }
+  .sk-bar.w80 { width: 80%; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .sk-bar { animation: none; } }
+  /* timing readout: only with ?debug=1 */
+  #debug { margin: 16px 0 0; padding: 10px 12px; border: 1px dashed var(--muted); border-radius: 10px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -175,9 +188,12 @@
 <main>
   <!-- Loading -->
   <section id="s-loading" class="screen active">
-    <div class="card center">
-      <div class="spinner"></div>
-      <p class="muted" id="loading-text">กำลังโหลด…</p>
+    <div class="card">
+      <h1 class="sk-title" id="sk-title">HR onLine</h1>
+      <div class="sk-bar w60"></div>
+      <div class="sk-bar"></div>
+      <div class="sk-bar w80"></div>
+      <p class="muted center" id="loading-text">กำลังโหลด…</p>
     </div>
   </section>
 
@@ -386,14 +402,27 @@
       <button id="btn-retry">ลองใหม่</button>
     </div>
   </section>
-  <p class="ver">HR onLine · v0.5.0</p>
+  <div id="debug" hidden></div>
+  <p class="ver">HR onLine · v0.6.0</p>
 </main>
 
-<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
   // Public IDs only. No keys or employee data live in this page.
   const LIFF_ID = '2011968077-x2FSrHSN';
   const ENGINE_URL = 'https://script.google.com/macros/s/AKfycbyNNtaCsvEDdfHhqJsHuyx1DnXZft2X5tfjS9c1ghWH-hNCmb-i2WTX7h2GujhpZqY7/exec';
+
+  // Speed: timings are measured from the moment the page started loading. Add ?debug=1 to see them.
+  const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
+  const marks = [];
+  const engineCalls = [];
+  const mark = name => marks.push([name, Math.round(performance.now())]);
+  mark('page script starts');
+
+  // Speed: wake the engine now, while LINE's code downloads and LINE login runs. Its answer is not used.
+  try {
+    fetch(ENGINE_URL + '?warm=1', { mode: 'no-cors' }).then(() => mark('engine warm-up answered'), () => {});
+    mark('engine warm-up sent');
+  } catch (e) { /* warm-up only */ }
 
   const MESSAGES = {
     // One message for every registration failure, so nobody can tell which part was wrong.
@@ -463,6 +492,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     window.scrollTo(0, 0);
+    if (id !== 's-loading' && !marks.some(m => m[0] === 'screen shown')) { mark('screen shown'); showDebug(); }
   }
 
   function showError(text) {
@@ -478,11 +508,24 @@
   }
 
   async function callEngine(payload) {
+    const t = performance.now();
     const res = await fetch(ENGINE_URL, {
       method: 'POST',
-      body: JSON.stringify(Object.assign({ idToken: liff.getIDToken() }, payload))
+      body: JSON.stringify(Object.assign({ idToken: liff.getIDToken(), debug: DEBUG }, payload))
     });
-    return res.json();
+    const r = await res.json();
+    engineCalls.push({ action: payload.action, round: Math.round(performance.now() - t), engine: r.ms, trace: r.trace });
+    return r;
+  }
+
+  function showDebug() {
+    if (!DEBUG) return;
+    const lines = marks.slice().sort((a, b) => a[1] - b[1]).map(m => String(m[1]).padStart(6) + ' ms  ' + m[0]);
+    engineCalls.forEach(c => lines.push('engine ' + c.action + ': round trip ' + c.round + ' ms, engine run ' + c.engine + ' ms, ' + (c.trace || '')));
+    lines.push('inside LINE app: ' + (window.liff && liff.isInClient ? liff.isInClient() : '?'));
+    const box = $('debug');
+    box.hidden = false;
+    box.textContent = lines.join('\n');
   }
 
   // Shared handling when a screen's first call is refused.
@@ -530,6 +573,7 @@
     show('s-loading');
     try {
       await liff.init({ liffId: LIFF_ID });
+      mark('LINE login done (liff.init)');
       if (!liff.isLoggedIn()) { liff.login(); return; }
 
       const page = currentPage();
@@ -1064,6 +1108,12 @@
   }
 
   fillDateSelects();
+  $('sk-title').textContent = PAGES[currentPage()].name;
+  mark('page ready');
+</script>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+  mark('LINE code loaded');
   start();
 </script>
 </body>
