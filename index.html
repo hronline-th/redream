@@ -222,6 +222,25 @@
   .rs-chip { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 14px; }
   .rs-chip.me { background: #EAF2FF; border-color: var(--brand); color: var(--brand-dark); font-weight: 600; }
   .rs-group.muted-g h3 { color: var(--muted); font-weight: 500; }
+  /* clock-in */
+  .ck-time { font-size: 44px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .ck-date { text-align: center; color: var(--muted); margin-top: 2px; }
+  .ck-shift .lbl { font-size: 13px; color: var(--muted); }
+  .ck-shift b { font-size: 18px; }
+  .ck-gps { padding: 10px 12px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
+  .ck-gps.wait { background: #EEF5FF; color: #1E3A6B; }
+  .ck-gps.in { background: #E7F6EC; color: #127A3E; }
+  .ck-gps.out { background: #FFF4D6; color: #8A5300; }
+  .ck-gps.no { background: var(--error-bg); color: var(--error); }
+  button.ck-big { font-size: 20px; padding: 18px; margin-top: 0; border-radius: 14px; }
+  button.ck-big.out { background: #17263F; }
+  button.ck-big.out:disabled { background: #9AA6BC; }
+  .ck-ok { background: #E7F6EC; color: #127A3E; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+  .ck-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .ck-row:last-child { border-bottom: 0; }
+  .ck-row .r { text-align: right; }
+  .ck-tag { display: inline-block; font-size: 12px; background: #FFF4D6; color: #7A5600; padding: 1px 8px; border-radius: 6px; margin-left: 6px; }
+  .ck-tag.red { background: var(--error-bg); color: var(--error); }
   /* timing readout: only with ?debug=1 */
   #debug { margin: 16px 0 0; padding: 10px 12px; border: 1px dashed var(--muted); border-radius: 10px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; word-break: break-all; }
 </style>
@@ -465,6 +484,39 @@
     </div>
   </section>
 
+  <!-- Clock-in -->
+  <section id="s-clock" class="screen">
+    <div class="stack">
+      <div class="card">
+        <div class="ck-time" id="ck-time">--:--</div>
+        <div class="ck-date" id="ck-date"></div>
+        <div class="error" id="ck-error"></div>
+      </div>
+      <div class="card ck-shift" id="ck-shift" hidden></div>
+      <div class="ck-ok" id="ck-ok" hidden></div>
+      <div class="ck-gps wait" id="ck-gps" hidden></div>
+      <div class="card" id="ck-reason" hidden>
+        <label class="field-label" for="ck-reason-sel" style="margin-top:0">เหตุผล</label>
+        <select id="ck-reason-sel"></select>
+        <div id="ck-text-wrap" hidden>
+          <label class="field-label" for="ck-reason-text">รายละเอียด</label>
+          <input type="text" id="ck-reason-text" maxlength="150" autocomplete="off">
+        </div>
+      </div>
+      <button class="ck-big" id="ck-btn" disabled>กำลังโหลด…</button>
+      <div class="card" id="ck-today" hidden>
+        <h2>บันทึกของวันนี้</h2>
+        <div id="ck-today-rows"></div>
+      </div>
+      <div class="card">
+        <h2>ประวัติ 7 วันล่าสุด</h2>
+        <div id="ck-hist"></div>
+        <p class="hint">เห็นเฉพาะของตัวเอง ลงเวลาผิดหรือลืมลง กรุณาแจ้งฝ่ายบุคคล</p>
+      </div>
+      <p class="hint center">ระบบบันทึกเวลาและตำแหน่งเฉพาะตอนที่คุณกดปุ่ม ไม่ติดตามตำแหน่งตลอดเวลา เวลาที่บันทึกคือเวลาของระบบ</p>
+    </div>
+  </section>
+
   <!-- Coming soon -->
   <section id="s-soon" class="screen">
     <div class="card center">
@@ -489,7 +541,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.6.3</p>
+  <p class="ver">HR onLine · v0.7.1</p>
 </main>
 
 <script>
@@ -549,12 +601,13 @@
     ROSTER_NOT_READY: 'ยังไม่มีตารางงานของเดือนนี้ กรุณาติดต่อหัวหน้างานหรือฝ่ายบุคคล',
     ROSTER_NO_MATCH: 'ไม่พบชื่อของคุณในตารางงานเดือนนี้ กรุณาแจ้งฝ่ายบุคคล',
     ROSTER_UNAVAILABLE: 'เปิดตารางงานไม่ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง หรือแจ้งฝ่ายบุคคล',
+    CLOCK_NOT_READY: 'ยังไม่ได้ตั้งค่าตำแหน่งร้านของคุณ กรุณาแจ้งฝ่ายบุคคล',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
   // Menu buttons open this page with ?page=<name>. Pages not built yet show "coming soon".
   const PAGES = {
-    clockin:   { name: 'ลงเวลา',         ready: false },
+    clockin:   { name: 'ลงเวลา',         ready: true },
     leave:     { name: 'ลางาน',          ready: true },
     roster:    { name: 'ตารางงาน',       ready: true },
     documents: { name: 'ขอเอกสาร',       ready: true },
@@ -667,7 +720,7 @@
 
       const page = currentPage();
       // Screens with their own data ask the engine once; "not registered" sends the person to registration.
-      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster('') };
+      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster(''), clockin: loadClock };
       if (PAGES[page].ready && loaders[page]) {
         $('loading-text').textContent = 'กำลังโหลด…';
         const r = await loaders[page]();
@@ -1105,6 +1158,245 @@
     const [y, m] = key.split('-').map(Number);
     return MONTHS_TH[m - 1] + ' ' + (y + 543);
   }
+
+  /* ---------- Clock-in ---------- */
+  const CK_DOW = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const CK_MESSAGES = {
+    LOCATION_REQUIRED: 'ยังหาตำแหน่งไม่ได้ กรุณาเปิดตำแหน่งแล้วลองใหม่',
+    REASON_REQUIRED: 'คุณอยู่นอกพื้นที่ร้าน กรุณาเลือกเหตุผลก่อนลงเวลา',
+    REASON_TEXT_REQUIRED: 'กรุณาระบุรายละเอียดของเหตุผล',
+    BAD_REQUEST: 'ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+  };
+  const CK_LOCATION_OFF = 'ใช้ตำแหน่งไม่ได้ กรุณาเปิดตำแหน่ง (Location) ให้แอป LINE ในการตั้งค่ามือถือ แล้วกดลองใหม่ ถ้าไม่มีตำแหน่งจะลงเวลาไม่ได้ เพื่อป้องกันการลงเวลาแทนกัน';
+  let clockData = null, clockPos = null, clockLocating = false, clockBusy = false, clockOffset = 0, clockTimer = null, clockLocError = false, clockForceReason = false;
+
+  function ckError(text) {
+    const box = $('ck-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+
+  function ckDistanceM(lat1, lng1, lat2, lng2) {
+    const rad = x => x * Math.PI / 180;
+    const dLat = rad(lat2 - lat1), dLng = rad(lng2 - lng1);
+    const a = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.pow(Math.sin(dLng / 2), 2);
+    return Math.round(2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(a))));
+  }
+
+  function ckDistText(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' กม.' : m + ' ม.'; }
+
+  function ckTick() {
+    const d = new Date(Date.now() + clockOffset);
+    $('ck-time').textContent = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+    $('ck-date').textContent = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+  }
+
+  function ckGetPosition() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) { reject(new Error('LOCATION')); return; }
+      navigator.geolocation.getCurrentPosition(
+        p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, at: Date.now() }),
+        () => reject(new Error('LOCATION')),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    });
+  }
+
+  // Where the person is, compared with the store (for the screen only: the engine works the distance out again).
+  function ckSide() {
+    if (!clockPos || !clockData) return null;
+    const s = clockData.store;
+    const dist = ckDistanceM(clockPos.lat, clockPos.lng, s.lat, s.lng);
+    return { dist: dist, inside: dist <= s.radius };
+  }
+
+  function ckReasonValue() {
+    const code = $('ck-reason-sel').value;
+    const r = clockData && clockData.reasons.find(x => x.code === code);
+    return { code: code, needsText: !!(r && r.needsText), text: $('ck-reason-text').value.trim() };
+  }
+
+  function ckRefresh() {
+    const next = clockData ? clockData.next : '';
+    const gps = $('ck-gps');
+    const btn = $('ck-btn');
+    const side = ckSide();
+    const reasonBox = $('ck-reason');
+    reasonBox.hidden = true;
+    btn.classList.toggle('out', next === 'OUT');
+
+    if (next === 'DONE') {
+      gps.hidden = true;
+      btn.textContent = 'ลงเวลาครบแล้ววันนี้'; btn.disabled = true;
+      return;
+    }
+    const label = next === 'OUT' ? 'ลงเวลาออกงาน' : 'ลงเวลาเข้างาน';
+    gps.hidden = false;
+    if (clockBusy) { btn.disabled = true; return; }
+    if (clockLocating) {
+      gps.className = 'ck-gps wait'; gps.textContent = '📍 กำลังหาตำแหน่ง…';
+      btn.textContent = 'กำลังหาตำแหน่ง…'; btn.disabled = true;
+      return;
+    }
+    if (!side) {
+      gps.className = 'ck-gps no'; gps.textContent = '📍 ' + CK_LOCATION_OFF;
+      btn.textContent = 'ลองใหม่'; btn.disabled = false;
+      return;
+    }
+    if (side.inside && !clockForceReason) {
+      gps.className = 'ck-gps in';
+      gps.textContent = '📍 คุณอยู่ในพื้นที่ร้าน (ห่าง ' + ckDistText(side.dist) + ')';
+      btn.textContent = label; btn.disabled = false;
+      return;
+    }
+    if (!side.inside && !clockData.outsideAllowed) {
+      gps.className = 'ck-gps no';
+      gps.textContent = '📍 คุณอยู่นอกพื้นที่ร้าน (ห่าง ' + ckDistText(side.dist) + ') ต้องอยู่ในรัศมี ' + clockData.store.radius + ' ม. จากร้านจึงจะลงเวลาได้';
+      btn.textContent = 'ตรวจตำแหน่งอีกครั้ง'; btn.disabled = false;
+      return;
+    }
+    gps.className = 'ck-gps out';
+    gps.textContent = '📍 ' + (side.inside ? 'ระบบตรวจพบว่าคุณอยู่นอกพื้นที่ร้าน' : 'คุณอยู่นอกพื้นที่ร้าน (ห่าง ' + ckDistText(side.dist) + ')') + ' ยังลงเวลาได้ แต่ต้องเลือกเหตุผล ฝ่ายบุคคลจะเห็นรายการนี้';
+    reasonBox.hidden = false;
+    const rv = ckReasonValue();
+    $('ck-text-wrap').hidden = !rv.needsText;
+    btn.textContent = label;
+    btn.disabled = !rv.code || (rv.needsText && !rv.text);
+  }
+
+  function ckRow(left, rightText, tags) {
+    const row = document.createElement('div'); row.className = 'ck-row';
+    const l = document.createElement('div'); l.textContent = left;
+    const r = document.createElement('div'); r.className = 'r';
+    const t = document.createElement('span'); t.textContent = rightText; r.append(t);
+    (tags || []).forEach(g => {
+      const tag = document.createElement('span'); tag.className = 'ck-tag' + (g.red ? ' red' : ''); tag.textContent = g.text; r.append(tag);
+    });
+    row.append(l, r);
+    return row;
+  }
+
+  function drawClock(r, locate) {
+    clockData = r;
+    clockForceReason = false;
+    clockOffset = r.nowMs - Date.now();
+    ckTick();
+    if (!clockTimer) clockTimer = setInterval(ckTick, 5000);
+
+    const sel = $('ck-reason-sel');
+    sel.innerHTML = '';
+    sel.add(new Option('เลือกเหตุผล…', ''));
+    r.reasons.forEach(x => sel.add(new Option(x.label, x.code)));
+    $('ck-reason-text').value = '';
+
+    const today = $('ck-today-rows');
+    today.innerHTML = '';
+    r.records.forEach(x => {
+      const tags = x.outside ? [{ text: 'นอกพื้นที่' + (x.reason ? ' · ' + x.reason : '') }] : [];
+      today.append(ckRow(x.type === 'IN' ? 'เข้างาน' : 'ออกงาน', x.time, tags));
+    });
+    $('ck-today').hidden = !r.records.length;
+
+    const hist = $('ck-hist');
+    hist.innerHTML = '';
+    if (!r.history.length) {
+      const p = document.createElement('div'); p.className = 'empty'; p.textContent = 'ยังไม่มีประวัติการลงเวลา'; hist.append(p);
+    }
+    r.history.forEach(x => {
+      const tags = [];
+      if (x.outside) tags.push({ text: 'นอกพื้นที่' });
+      if (x.missingOut) tags.push({ text: 'ไม่ได้ลงเวลาออก', red: true });
+      const times = x.inAt ? x.inAt + ' – ' + (x.outAt || '…') : '–';
+      hist.append(ckRow(CK_DOW[x.dow] + ' ' + Number(x.d.slice(8, 10)), times, tags));
+    });
+
+    ckError('');
+    show('s-clock');
+    ckRefresh();
+    if (locate && r.next !== 'DONE') ckLocate();
+  }
+
+  async function ckLocate() {
+    clockLocating = true; clockLocError = false;
+    ckRefresh();
+    try { clockPos = await ckGetPosition(); }
+    catch (err) { clockPos = null; clockLocError = true; }
+    clockLocating = false;
+    ckRefresh();
+  }
+
+  // The shift card fills in after the screen is already showing, so the screen never waits for the roster file.
+  async function ckLoadShift(date) {
+    try {
+      const r = await callEngine({ action: 'clockShift', date: date });
+      const box = $('ck-shift');
+      if (!r.ok || !r.shift) { box.hidden = true; return; }
+      box.innerHTML = '';
+      const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = 'กะวันนี้ (จากตารางงาน)';
+      const b = document.createElement('b');
+      const s = r.shift;
+      b.textContent = s.kind === 'off' ? 'วันหยุดตามตารางงาน' : (s.label + (s.start && s.end ? ' · ' + s.start + '–' + s.end : ''));
+      box.append(lbl, b);
+      box.hidden = false;
+    } catch (err) { /* the card simply stays hidden */ }
+  }
+
+  async function loadClock() {
+    $('loading-text').textContent = 'กำลังโหลด…';
+    const r = await callEngine({ action: 'clockInfo' });
+    if (!r.ok) return notOk(r);
+    drawClock(r, true);
+    ckLoadShift(r.shiftDate);
+    return r;
+  }
+
+  async function ckPress() {
+    if (clockBusy || !clockData) return;
+    if (!clockPos || clockLocError) { await ckLocate(); return; }
+    const before = ckSide();
+    if (before && !before.inside && !clockData.outsideAllowed) { await ckLocate(); return; }   // outside: the button only re-checks the position
+    clockBusy = true;
+    ckError('');
+    $('ck-ok').hidden = true;
+    const btn = $('ck-btn');
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    try {
+      // a reading older than 20 seconds is taken again at the moment of the tap
+      if (Date.now() - clockPos.at > 20000) clockPos = await ckGetPosition();
+      const payload = { action: 'clockSubmit', type: clockData.next, lat: clockPos.lat, lng: clockPos.lng, accuracy: clockPos.accuracy };
+      const side = ckSide();
+      if (side && (!side.inside || clockForceReason)) {
+        const rv = ckReasonValue();
+        payload.reason = rv.code; payload.reasonText = rv.text;
+      }
+      const r = await callEngine(payload);
+      if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
+      if (r.ok) {
+        const ok = $('ck-ok');
+        ok.textContent = '✔ บันทึก' + (r.type === 'IN' ? 'เข้างาน' : 'ออกงาน') + 'เวลา ' + r.time + ' แล้ว' + (r.outside ? ' (นอกพื้นที่ ฝ่ายบุคคลจะเห็นรายการนี้)' : '');
+        drawClock(r.info, false);
+        ok.hidden = false;
+      } else if (r.code === 'STATE_CHANGED' && r.info) {
+        drawClock(r.info, false);      // a second tap, or another phone: show the true state
+      } else if (r.code === 'OUTSIDE_AREA') {
+        ckError('คุณอยู่นอกพื้นที่ร้าน (ห่าง ' + ckDistText(r.distance) + ') ต้องอยู่ในรัศมี ' + r.radius + ' ม. จากร้านจึงจะลงเวลาได้');
+      } else if (r.code === 'REASON_REQUIRED' || r.code === 'REASON_TEXT_REQUIRED') {
+        clockForceReason = true;
+        ckError(CK_MESSAGES[r.code]);
+      } else {
+        ckError(CK_MESSAGES[r.code] || MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
+      }
+    } catch (err) {
+      if (err && err.message === 'LOCATION') { clockPos = null; clockLocError = true; }
+      else ckError(MESSAGES.NETWORK);
+    } finally {
+      clockBusy = false;
+      ckRefresh();
+    }
+  }
+  $('ck-btn').addEventListener('click', ckPress);
+  $('ck-reason-sel').addEventListener('change', ckRefresh);
+  $('ck-reason-text').addEventListener('input', ckRefresh);
 
   /* ---------- Roster ---------- */
   const DOW_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
