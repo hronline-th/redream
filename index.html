@@ -235,6 +235,30 @@
   button.ck-big { font-size: 20px; padding: 18px; margin-top: 0; border-radius: 14px; }
   button.ck-big.out { background: #17263F; }
   button.ck-big.out:disabled { background: #9AA6BC; }
+  /* announcements */
+  .nw-seg { display: flex; gap: 8px; }
+  .nw-seg button { margin: 0; padding: 12px 8px; background: #fff; color: var(--brand); border: 1px solid var(--brand); font-size: 15px; }
+  .nw-seg button.on { background: var(--brand); color: #fff; }
+  .nw-cnt { display: inline-block; min-width: 22px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #D92D20; color: #fff; font-size: 13px; line-height: 22px; }
+  .nw-item { cursor: pointer; padding: 14px 16px; }
+  .nw-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .nw-title { font-weight: 600; font-size: 16px; line-height: 1.4; overflow-wrap: anywhere; }
+  .nw-date { font-size: 13px; color: var(--muted); }
+  .nw-badges { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex: none; }
+  .nw-pill { font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
+  .nw-pill.new { background: #D92D20; color: #fff; }
+  .nw-pill.need { background: #FFF4D6; color: #8A5300; }
+  .nw-pill.done { background: #E7F6EC; color: #127A3E; }
+  .nw-prev { font-size: 14px; color: var(--muted); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .nw-body { margin-top: 8px; font-size: 15px; white-space: pre-line; overflow-wrap: anywhere; }
+  .nw-link { display: block; margin-top: 12px; text-align: center; background: #fff; color: var(--brand); border: 1px solid var(--brand); border-radius: 12px; padding: 12px; font-weight: 600; text-decoration: none; }
+  .nw-ack { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; cursor: default; }
+  .nw-ack label.nw-tick { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; font-weight: 400; margin: 0; cursor: pointer; }
+  .nw-ack input[type="checkbox"] { width: 22px; height: 22px; flex: none; margin: 1px 0 0; padding: 0; }
+  .nw-ack button { margin-top: 12px; }
+  .nw-done { margin-top: 12px; background: #E7F6EC; color: #127A3E; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+  .nw-empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+  .nw-empty b { color: #127A3E; font-size: 17px; font-weight: 600; }
   .ck-ok { background: #E7F6EC; color: #127A3E; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
   .ck-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
   .ck-row:last-child { border-bottom: 0; }
@@ -517,6 +541,19 @@
     </div>
   </section>
 
+  <!-- Announcements -->
+  <section id="s-news" class="screen">
+    <div class="stack">
+      <div class="nw-seg" id="nw-seg">
+        <button type="button" id="nw-t1" class="on">ใหม่ / รอดำเนินการ</button>
+        <button type="button" id="nw-t2">ดูย้อนหลัง</button>
+      </div>
+      <div class="ck-ok" id="nw-flash" hidden></div>
+      <div class="error" id="nw-error"></div>
+      <div class="stack" id="nw-list"></div>
+    </div>
+  </section>
+
   <!-- Coming soon -->
   <section id="s-soon" class="screen">
     <div class="card center">
@@ -541,7 +578,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.7.1</p>
+  <p class="ver">HR onLine · v0.8.0</p>
 </main>
 
 <script>
@@ -601,6 +638,8 @@
     ROSTER_NOT_READY: 'ยังไม่มีตารางงานของเดือนนี้ กรุณาติดต่อหัวหน้างานหรือฝ่ายบุคคล',
     ROSTER_NO_MATCH: 'ไม่พบชื่อของคุณในตารางงานเดือนนี้ กรุณาแจ้งฝ่ายบุคคล',
     ROSTER_UNAVAILABLE: 'เปิดตารางงานไม่ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง หรือแจ้งฝ่ายบุคคล',
+    NEWS_NOT_FOUND: 'ไม่พบประกาศนี้แล้ว กรุณาปิดแล้วเปิดหน้านี้ใหม่',
+    NEWS_NOT_NEEDED: 'ประกาศนี้ไม่ต้องรับทราบสำหรับคุณ',
     CLOCK_NOT_READY: 'ยังไม่ได้ตั้งค่าตำแหน่งร้านของคุณ กรุณาแจ้งฝ่ายบุคคล',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
@@ -612,7 +651,7 @@
     roster:    { name: 'ตารางงาน',       ready: true },
     documents: { name: 'ขอเอกสาร',       ready: true },
     payslip:   { name: 'สลิปเงินเดือน',   ready: true },
-    news:      { name: 'ประกาศ',         ready: false },
+    news:      { name: 'ประกาศ',         ready: true },
     profile:   { name: 'ข้อมูลของฉัน',    ready: true },
     faq:       { name: 'คำถามที่พบบ่อย', ready: false }
   };
@@ -720,7 +759,7 @@
 
       const page = currentPage();
       // Screens with their own data ask the engine once; "not registered" sends the person to registration.
-      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster(''), clockin: loadClock };
+      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster(''), clockin: loadClock, news: loadNews };
       if (PAGES[page].ready && loaders[page]) {
         $('loading-text').textContent = 'กำลังโหลด…';
         const r = await loaders[page]();
@@ -1397,6 +1436,156 @@
   $('ck-btn').addEventListener('click', ckPress);
   $('ck-reason-sel').addEventListener('change', ckRefresh);
   $('ck-reason-text').addEventListener('input', ckRefresh);
+
+  /* ---------- Announcements ---------- */
+  // Page 1: waiting for acknowledgement (any age) and plain announcements not opened yet. Page 2 ("ดูย้อนหลัง"): everything else.
+  // Which plain announcements were opened is remembered on this phone only; the server never stores who read what.
+  let newsData = null;
+  let newsTab = 1;
+  let newsOpenId = '';
+  let newsRead = new Set();
+  let newsJust = new Set();      // opened during this visit: they stay on page 1 until the person leaves the page
+
+  function newsKey() { return 'hro_news_' + (newsData && newsData.uk ? newsData.uk : ''); }
+  function newsLoadRead() {
+    newsRead = new Set();
+    try { const a = JSON.parse(localStorage.getItem(newsKey()) || '[]'); if (Array.isArray(a)) a.forEach(x => newsRead.add(String(x))); } catch (err) { /* nothing remembered */ }
+  }
+  function newsSaveRead() {
+    try { localStorage.setItem(newsKey(), JSON.stringify([...newsRead].slice(-300))); } catch (err) { /* not remembered */ }
+  }
+  function newsOnPage1(it) {
+    if (it.ack === 'req') return true;
+    if (it.ack === 'none' && !it.old) return !newsRead.has(it.id) || newsJust.has(it.id);
+    return false;
+  }
+  function nwEl(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function nwError(text) {
+    const box = $('nw-error');
+    box.textContent = text;
+    box.style.display = text ? 'block' : 'none';
+  }
+  function nwFlash(text) { const f = $('nw-flash'); f.textContent = text; f.hidden = !text; }
+
+  function nwCard(it) {
+    const open = newsOpenId === it.id;
+    const c = nwEl('div', 'card nw-item');
+    const head = nwEl('div', 'nw-head');
+    const left = nwEl('div');
+    left.appendChild(nwEl('div', 'nw-title', it.title));
+    left.appendChild(nwEl('div', 'nw-date', it.date + (it.ack === 'done' && !open && it.when ? ' · รับทราบ ' + it.when.split(' เวลา')[0] : '')));
+    const badges = nwEl('div', 'nw-badges');
+    if (it.ack === 'req') badges.appendChild(nwEl('span', 'nw-pill need', 'รอดำเนินการ'));
+    if (it.ack === 'done') badges.appendChild(nwEl('span', 'nw-pill done', 'รับทราบแล้ว ✓'));
+    if (!newsRead.has(it.id) && !it.old && it.ack !== 'done') badges.appendChild(nwEl('span', 'nw-pill new', 'ใหม่'));
+    head.appendChild(left); head.appendChild(badges);
+    c.appendChild(head);
+    if (!open) { c.appendChild(nwEl('div', 'nw-prev', it.body.replace(/\s+/g, ' '))); return c; }
+    c.appendChild(nwEl('div', 'nw-body', it.body));
+    if (it.link) {
+      const a = nwEl('a', 'nw-link', 'เปิดลิงก์ที่เกี่ยวข้อง');
+      a.href = it.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.addEventListener('click', ev => {
+        ev.stopPropagation();
+        try { if (window.liff && liff.openWindow) { ev.preventDefault(); liff.openWindow({ url: it.link, external: true }); } } catch (err) { /* the normal link works */ }
+      });
+      c.appendChild(a);
+    }
+    if (it.ack === 'req') {
+      const box = nwEl('div', 'nw-ack');
+      const lab = nwEl('label', 'nw-tick');
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'nw-cb';
+      lab.appendChild(cb); lab.appendChild(nwEl('span', '', 'ข้าพเจ้าได้อ่านและเข้าใจประกาศนี้แล้ว'));
+      const btn = nwEl('button', 'nw-go', 'ยืนยันและรับทราบ'); btn.type = 'button'; btn.disabled = true;
+      cb.addEventListener('change', () => { btn.disabled = !cb.checked; });
+      btn.addEventListener('click', () => nwAck(it, btn));
+      box.addEventListener('click', ev => ev.stopPropagation());
+      box.appendChild(lab); box.appendChild(btn);
+      c.appendChild(box);
+    }
+    if (it.ack === 'done') c.appendChild(nwEl('div', 'nw-done', '✓ คุณรับทราบแล้ว' + (it.when ? 'เมื่อ ' + it.when : '')));
+    return c;
+  }
+
+  function drawNews() {
+    const items = newsData.items;
+    const l1 = items.filter(newsOnPage1).sort((a, b) => (b.ack === 'req') - (a.ack === 'req'));
+    const l2 = items.filter(i => !newsOnPage1(i));
+    const t1 = $('nw-t1'), t2 = $('nw-t2');
+    t1.textContent = 'ใหม่ / รอดำเนินการ';
+    const pend = items.filter(i => i.ack === 'req' || (i.ack === 'none' && !i.old && !newsRead.has(i.id))).length;
+    if (pend) t1.appendChild(nwEl('span', 'nw-cnt', String(pend)));
+    t1.classList.toggle('on', newsTab === 1); t2.classList.toggle('on', newsTab === 2);
+    const list = $('nw-list');
+    list.textContent = '';
+    const shown = newsTab === 1 ? l1 : l2;
+    if (!items.length) {
+      list.appendChild(nwEl('div', 'card nw-empty', 'ยังไม่มีประกาศ'));
+    } else if (!shown.length) {
+      const e = nwEl('div', 'card nw-empty');
+      e.appendChild(newsTab === 1 ? nwEl('b', '', '✓ ยังไม่มีประกาศฉบับใหม่ / ดำเนินการครบแล้ว') : document.createTextNode('ยังไม่มีประกาศย้อนหลัง'));
+      list.appendChild(e);
+    } else {
+      shown.forEach(it => {
+        const card = nwCard(it);
+        card.addEventListener('click', () => {
+          newsOpenId = newsOpenId === it.id ? '' : it.id;
+          nwFlash(''); nwError('');
+          if (newsOpenId && !newsRead.has(it.id)) {
+            newsRead.add(it.id); newsSaveRead();
+            if (it.ack === 'none') newsJust.add(it.id);
+          }
+          drawNews();
+        });
+        list.appendChild(card);
+      });
+    }
+  }
+
+  async function nwAck(it, btn) {
+    nwError('');
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    try {
+      const r = await callEngine({ action: 'newsAck', itemId: it.id, confirm: true });
+      if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return; }
+      if (!r.ok) { nwError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR); btn.disabled = false; btn.textContent = 'ยืนยันและรับทราบ'; return; }
+      if (r.already || !r.when) {
+        const fresh = await callEngine({ action: 'newsList' });
+        if (fresh.ok) newsData = fresh;
+      } else { it.ack = 'done'; it.when = r.when; }
+      newsOpenId = '';
+      nwFlash('✓ บันทึกการรับทราบแล้ว รายการนี้ย้ายไปที่ "ดูย้อนหลัง"');
+      drawNews();
+    } catch (err) {
+      nwError(MESSAGES.NETWORK); btn.disabled = false; btn.textContent = 'ยืนยันและรับทราบ';
+    }
+  }
+
+  function newsSwitch(tab) {
+    newsTab = tab; newsOpenId = ''; newsJust = new Set();
+    nwFlash(''); nwError('');
+    drawNews();
+    window.scrollTo(0, 0);
+  }
+  $('nw-t1').addEventListener('click', () => newsSwitch(1));
+  $('nw-t2').addEventListener('click', () => newsSwitch(2));
+
+  async function loadNews() {
+    $('loading-text').textContent = 'กำลังโหลด…';
+    const r = await callEngine({ action: 'newsList' });
+    if (!r.ok) return notOk(r);
+    newsData = r; newsTab = 1; newsOpenId = ''; newsJust = new Set();
+    newsLoadRead();
+    nwFlash(''); nwError('');
+    drawNews();
+    show('s-news');
+    return r;
+  }
 
   /* ---------- Roster ---------- */
   const DOW_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
