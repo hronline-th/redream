@@ -122,6 +122,8 @@
   .icon .ring { fill: #D6E6FF; }
   .icon .dot { fill: var(--brand); }
   .icon .mark { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon.no .ring { fill: #FDECEC; }
+  .icon.no .dot { fill: #E8908B; }
   .icon.warn .ring { fill: #FEF0E1; }
   .icon.warn .dot { fill: #C46A12; }
   .icon .check { stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw .45s .15s ease-out forwards; }
@@ -348,8 +350,11 @@
   <!-- Done -->
   <section id="s-done" class="screen">
     <div class="card center">
-      <div class="icon" aria-hidden="true">
+      <div class="icon" id="done-icon-ok" aria-hidden="true">
         <svg viewBox="0 0 64 64"><g class="pop"><circle class="ring" cx="32" cy="32" r="32"/><circle class="dot" cx="32" cy="32" r="22"/><path class="mark check" d="M22.5 32.5 L29 39 L41.5 26.5"/></g></svg>
+      </div>
+      <div class="icon no" id="done-icon-no" aria-hidden="true" hidden>
+        <svg viewBox="0 0 64 64"><g class="pop"><circle class="ring" cx="32" cy="32" r="32"/><circle class="dot" cx="32" cy="32" r="22"/><path class="mark" d="M24.5 24.5 L39.5 39.5 M39.5 24.5 L24.5 39.5"/></g></svg>
       </div>
       <h1 id="done-title">ลงทะเบียนสำเร็จ</h1>
       <p class="muted" id="done-text">บัญชี LINE ของคุณเชื่อมกับข้อมูลพนักงานเรียบร้อยแล้ว</p>
@@ -578,7 +583,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.9.0</p>
+  <p class="ver">HR onLine · v0.9.1</p>
 </main>
 
 <script>
@@ -682,7 +687,9 @@
     show('s-error');
   }
 
-  function showDone(title, text) {
+  function showDone(title, text, kind) {
+    $('done-icon-ok').hidden = kind === 'no';
+    $('done-icon-no').hidden = kind !== 'no';
     $('done-title').textContent = title;
     $('done-text').textContent = text || '';
     $('done-text').hidden = !text;
@@ -714,7 +721,7 @@
   function notOk(r) {
     if (r.code === 'NOT_REGISTERED') return r;
     if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return r; }
-    if (r.code === 'NOT_ALLOWED') { showDone('ใช้เมนูนี้ไม่ได้', MESSAGES.NOT_ALLOWED); return r; }
+    if (r.code === 'NOT_ALLOWED') { showDone('ใช้เมนูนี้ไม่ได้', MESSAGES.NOT_ALLOWED, 'no'); return r; }
     showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
     return r;
   }
@@ -1923,4 +1930,3 @@
 </script>
 </body>
 </html>
-  
