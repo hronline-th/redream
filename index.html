@@ -74,6 +74,19 @@
   .file-btn { flex: none; background: var(--brand); color: #fff; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 8px; }
   .file-name { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .file-pick.has-file .file-name { color: var(--text); }
+  .mi-name { font-size: 18px; font-weight: 600; margin: 0; }
+  .mi-sub { color: var(--muted); font-size: 14px; margin: 2px 0 0; }
+  .mi-bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 8px 0 4px; }
+  .mi-bar > i { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .3s; }
+  .mi-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .mi-row:last-child { border-bottom: 0; }
+  .mi-row .t { font-weight: 500; }
+  .mi-row .s { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .mi-row .s.bad { color: #A1262A; }
+  .mi-row .act { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+  .pill.none { background: #EEF1F6; color: var(--muted); }
+  .pill.resend { background: #FDECEC; color: #A1262A; }
+  .flash { background: #E7F6EC; color: #127A3E; border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 12px; }
   .ver { text-align: center; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
@@ -301,6 +314,7 @@
           <li>บัญชี LINE ของคุณ (รหัสผู้ใช้ LINE)</li>
           <li>เบอร์โทรศัพท์ วันเกิด และเลขบัตร 4 ตัวท้าย เพื่อยืนยันตัวตน</li>
           <li>ข้อมูลการทำงานที่คุณส่งผ่านระบบ เช่น การลา การลงเวลา และคำขอเอกสาร</li>
+          <li>เอกสารที่คุณส่งผ่านเมนู "ข้อมูลของฉัน" เช่น บัตรประชาชน ทะเบียนบ้าน หน้าบุ๊คแบงก์ วุฒิการศึกษา และรูปถ่าย (เก็บในที่เก็บเฉพาะของฝ่ายบุคคล และลบเมื่อพ้นระยะเวลาที่กำหนดหลังพ้นสภาพพนักงาน)</li>
         </ul>
         <h2>วัตถุประสงค์</h2>
         <ul>
@@ -560,6 +574,43 @@
   </section>
 
   <!-- Coming soon -->
+  <!-- My information: documents -->
+  <section id="s-myinfo" class="screen">
+    <div class="stack">
+      <div class="card">
+        <p class="mi-name" id="mi-name"></p>
+        <p class="mi-sub" id="mi-sub"></p>
+        <div class="flash" id="mi-flash" hidden></div>
+        <div style="margin-top:14px"><b>เอกสารของฉัน</b> <span class="muted" id="mi-count"></span></div>
+        <div class="mi-bar"><i id="mi-bar"></i></div>
+        <div id="mi-list"></div>
+        <p class="muted" style="margin-top:12px">ไฟล์ที่ส่งเห็นได้เฉพาะฝ่ายบุคคล คุณจะเห็นเพียงสถานะของแต่ละรายการ</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s-upload" class="screen">
+    <div class="card">
+      <h1 id="up-title"></h1>
+      <p class="muted" id="up-hint"></p>
+      <div id="up-label-wrap" hidden>
+        <label for="up-label">ชื่อเอกสาร</label>
+        <input type="text" id="up-label" maxlength="60" placeholder="เช่น ใบขับขี่">
+      </div>
+      <span class="field-label">ไฟล์</span>
+      <label class="file-pick" for="up-file">
+        <span class="file-btn">ถ่ายรูปหรือเลือกไฟล์</span>
+        <span class="file-name" id="up-file-name">ยังไม่ได้เลือกไฟล์</span>
+      </label>
+      <input type="file" id="up-file" class="file-input">
+      <p class="hint" id="up-file-hint"></p>
+      <label class="check"><input type="checkbox" id="up-consent"> ฉันยินยอมให้บริษัทเก็บเอกสารนี้เพื่อการจ้างงานและการจ่ายเงินเดือน ตามประกาศความเป็นส่วนตัว</label>
+      <div class="error" id="up-error"></div>
+      <button id="btn-up-send">ส่งให้ HR</button>
+      <button class="secondary" id="btn-up-back">ย้อนกลับ</button>
+    </div>
+  </section>
+
   <section id="s-soon" class="screen">
     <div class="card center">
       <div class="icon" aria-hidden="true">
@@ -583,7 +634,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver" id="ver" hidden>HR onLine · v0.9.2</p>
+  <p class="ver" id="ver" hidden>HR onLine · v0.10.0</p>
 </main>
 
 <script>
@@ -648,6 +699,13 @@
     NEWS_NOT_NEEDED: 'ประกาศนี้ไม่ต้องรับทราบสำหรับคุณ',
     CLOCK_NOT_READY: 'ยังไม่ได้ตั้งค่าตำแหน่งร้านของคุณ กรุณาแจ้งฝ่ายบุคคล',
     NOT_ALLOWED: 'กรุณาติดต่อ HR',
+    EMPDOC_BAD_TYPE: 'ไฟล์ต้องเป็นรูป (JPG, PNG) หรือ PDF (รูปภาพถ่ายต้องเป็นรูปเท่านั้น)',
+    EMPDOC_TOO_LARGE: 'ไฟล์ใหญ่เกินไป กรุณาใช้ไฟล์ไม่เกิน 5 MB',
+    EMPDOC_TYPE: 'เอกสารประเภทนี้ไม่ต้องส่ง',
+    DOC_LOCKED: 'HR ตรวจเอกสารนี้แล้ว หากต้องการเปลี่ยน กรุณาติดต่อ HR',
+    DOC_LIMIT: 'ส่งครบจำนวนไฟล์ของเอกสารนี้แล้ว',
+    LABEL_REQUIRED: 'กรุณาระบุชื่อเอกสาร',
+    EMPDOC_NOT_READY: 'ระบบรับเอกสารยังไม่พร้อม กรุณาแจ้งฝ่ายบุคคล',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
@@ -767,6 +825,103 @@
     return '';
   }
 
+  // ---------- My information: employee documents ----------
+  const MI_STATE = { none: 'ยังไม่ส่ง', submitted: 'รอ HR ตรวจ', approved: 'HR ตรวจแล้ว', resend: 'ขอให้ส่งใหม่' };
+  let miInfo = null, miDoc = null, miFlash = '';
+
+  async function loadMyInfo() {
+    $('loading-text').textContent = 'กำลังโหลด…';
+    const r = await callEngine({ action: 'myInfo' });
+    if (!r.ok) return notOk(r);
+    if (r.notReady) { showError(MESSAGES.EMPDOC_NOT_READY); return r; }
+    renderMyInfo(r);
+    const note = menuNote(r);
+    if (note) { miFlash = note.replace(/^ · /, ''); renderMyInfo(r); }
+    show('s-myinfo');
+    return r;
+  }
+
+  function renderMyInfo(r) {
+    miInfo = r;
+    $('mi-name').textContent = r.name;
+    $('mi-sub').textContent = r.employeeId + ' · ' + r.store + ' · ' + r.typeLabel;
+    $('mi-flash').hidden = !miFlash;
+    $('mi-flash').textContent = miFlash;
+    $('mi-count').textContent = r.progress.done + ' / ' + r.progress.total;
+    $('mi-bar').style.width = (r.progress.total ? Math.round(100 * r.progress.done / r.progress.total) : 0) + '%';
+    const list = $('mi-list');
+    list.innerHTML = '';
+    r.docs.forEach(d => {
+      const row = document.createElement('div'); row.className = 'mi-row';
+      const left = document.createElement('div');
+      const t = document.createElement('div'); t.className = 't'; t.textContent = d.name + (d.required ? '' : ' (ถ้ามี)');
+      const sub = document.createElement('div'); sub.className = 's' + (d.state === 'resend' ? ' bad' : '');
+      sub.textContent = d.state === 'resend' ? (d.note || 'กรุณาส่งไฟล์ใหม่') : (d.multi && d.count ? 'ส่งแล้ว ' + d.count + ' ไฟล์' : (d.state === 'none' ? d.hint : ''));
+      left.append(t); if (sub.textContent) left.append(sub);
+      const act = document.createElement('div'); act.className = 'act';
+      const pill = document.createElement('span'); pill.className = 'pill ' + d.state; pill.textContent = MI_STATE[d.state];
+      act.append(pill);
+      if (d.canUpload) {
+        const b = document.createElement('button'); b.className = 'sm'; b.textContent = d.uploadLabel;
+        b.addEventListener('click', () => openUpload(d));
+        act.append(b);
+      }
+      row.append(left, act);
+      list.append(row);
+    });
+  }
+
+  function openUpload(d) {
+    miDoc = d;
+    $('up-title').textContent = d.name;
+    $('up-hint').textContent = d.hint;
+    $('up-label-wrap').hidden = !d.needsLabel;
+    $('up-label').value = '';
+    $('up-file').value = '';
+    $('up-file').accept = d.imageOnly ? 'image/*' : 'image/*,application/pdf';
+    $('up-file-name').textContent = 'ยังไม่ได้เลือกไฟล์';
+    document.querySelector('#s-upload .file-pick').classList.remove('has-file');
+    $('up-file-hint').textContent = d.imageOnly ? 'รูปถ่ายเท่านั้น' : 'รูป (JPG, PNG) หรือ PDF ไม่เกิน 5 MB';
+    $('up-consent').checked = false;
+    $('up-error').textContent = '';
+    show('s-upload');
+  }
+
+  $('up-file').addEventListener('change', e => {
+    const f = e.target.files[0];
+    $('up-file-name').textContent = f ? f.name : 'ยังไม่ได้เลือกไฟล์';
+    document.querySelector('#s-upload .file-pick').classList.toggle('has-file', !!f);
+  });
+  $('btn-up-back').addEventListener('click', () => show('s-myinfo'));
+  $('btn-up-send').addEventListener('click', async () => {
+    const err = t => { $('up-error').textContent = t; };
+    err('');
+    const f = $('up-file').files[0];
+    if (miDoc.needsLabel && !$('up-label').value.trim()) { err(MESSAGES.LABEL_REQUIRED); return; }
+    if (!f) { err('กรุณาเลือกไฟล์'); return; }
+    if (!$('up-consent').checked) { err(MESSAGES.CONSENT_REQUIRED); return; }
+    const btn = $('btn-up-send');
+    btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+    try {
+      let file;
+      try { file = await readCertificate(f); } catch (e) { err(MESSAGES.EMPDOC_BAD_TYPE); return; }
+      const r = await callEngine({ action: 'myDocUpload', docType: miDoc.code, label: $('up-label').value.trim(), file: file, consent: true });
+      if (r.ok) {
+        miFlash = 'ส่ง' + miDoc.name + 'ให้ HR แล้ว';
+        renderMyInfo(Object.assign({}, miInfo, r.info));
+        show('s-myinfo');
+      } else if (r.code === 'LINE_AUTH_FAILED') {
+        liff.logout(); liff.login();
+      } else {
+        err(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
+      }
+    } catch (e) {
+      err(MESSAGES.NETWORK);
+    } finally {
+      btn.disabled = false; btn.textContent = 'ส่งให้ HR';
+    }
+  });
+
   async function start() {
     show('s-loading');
     try {
@@ -776,7 +931,7 @@
 
       const page = currentPage();
       // Screens with their own data ask the engine once; "not registered" sends the person to registration.
-      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster(''), clockin: loadClock, news: loadNews };
+      const loaders = { leave: loadLeave, documents: loadDocs, payslip: loadPayslips, roster: () => loadRoster(''), clockin: loadClock, news: loadNews, profile: loadMyInfo };
       if (PAGES[page].ready && loaders[page]) {
         $('loading-text').textContent = 'กำลังโหลด…';
         const r = await loaders[page]();
