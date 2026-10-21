@@ -583,7 +583,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver">HR onLine · v0.9.1</p>
+  <p class="ver" id="ver" hidden>HR onLine · v0.9.2</p>
 </main>
 
 <script>
@@ -593,6 +593,7 @@
 
   // Speed: timings are measured from the moment the page started loading. Add ?debug=1 to see them.
   const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
+  if (DEBUG) document.getElementById('ver').hidden = false;   // the version label shows only with ?debug=1
   const marks = [];
   const engineCalls = [];
   const mark = name => marks.push([name, Math.round(performance.now())]);
@@ -646,7 +647,7 @@
     NEWS_NOT_FOUND: 'ไม่พบประกาศนี้แล้ว กรุณาปิดแล้วเปิดหน้านี้ใหม่',
     NEWS_NOT_NEEDED: 'ประกาศนี้ไม่ต้องรับทราบสำหรับคุณ',
     CLOCK_NOT_READY: 'ยังไม่ได้ตั้งค่าตำแหน่งร้านของคุณ กรุณาแจ้งฝ่ายบุคคล',
-    NOT_ALLOWED: 'เมนูนี้ไม่ได้เปิดให้พนักงานประเภทของคุณ หากคิดว่าเป็นความผิดพลาด กรุณาติดต่อฝ่ายบุคคล',
+    NOT_ALLOWED: 'กรุณาติดต่อ HR',
     NETWORK: 'เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   };
 
@@ -721,7 +722,7 @@
   function notOk(r) {
     if (r.code === 'NOT_REGISTERED') return r;
     if (r.code === 'LINE_AUTH_FAILED') { liff.logout(); liff.login(); return r; }
-    if (r.code === 'NOT_ALLOWED') { showDone('ใช้เมนูนี้ไม่ได้', MESSAGES.NOT_ALLOWED, 'no'); return r; }
+    if (r.code === 'NOT_ALLOWED') { showDone('ไม่สามารถใช้งานได้', MESSAGES.NOT_ALLOWED, 'no'); return r; }
     showError(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
     return r;
   }
