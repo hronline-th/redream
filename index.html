@@ -87,6 +87,10 @@
   .pill.none { background: #EEF1F6; color: var(--muted); }
   .pill.resend { background: #FDECEC; color: #A1262A; }
   .flash { background: #E7F6EC; color: #127A3E; border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 12px; }
+  .ct-text { white-space: pre-wrap; font-size: 14px; line-height: 1.7; max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #FBFDFF; margin: 10px 0 14px; }
+  .ct-pad { border: 1px dashed var(--brand); border-radius: 10px; background: #fff; touch-action: none; }
+  .ct-pad canvas { display: block; width: 100%; height: 150px; touch-action: none; }
+  .ct-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .ver { text-align: center; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
@@ -314,6 +318,7 @@
           <li>บัญชี LINE ของคุณ (รหัสผู้ใช้ LINE)</li>
           <li>เบอร์โทรศัพท์ วันเกิด และเลขบัตร 4 ตัวท้าย เพื่อยืนยันตัวตน</li>
           <li>ข้อมูลการทำงานที่คุณส่งผ่านระบบ เช่น การลา การลงเวลา และคำขอเอกสาร</li>
+          <li>รูปถ่ายตอนลงเวลาเข้า-ออกงาน (เก็บ 90 วันแล้วลบ) และลายเซ็นอิเล็กทรอนิกส์ในสัญญาจ้าง (เฉพาะพนักงาน Full-time)</li>
           <li>เอกสารที่คุณส่งผ่านเมนู "ข้อมูลของฉัน" เช่น บัตรประชาชน ทะเบียนบ้าน หน้าบุ๊คแบงก์ วุฒิการศึกษา และรูปถ่าย (เก็บในที่เก็บเฉพาะของฝ่ายบุคคล และลบเมื่อพ้นระยะเวลาที่กำหนดหลังพ้นสภาพพนักงาน)</li>
         </ul>
         <h2>วัตถุประสงค์</h2>
@@ -546,6 +551,8 @@
           <input type="text" id="ck-reason-text" maxlength="150" autocomplete="off">
         </div>
       </div>
+      <p class="hint center" id="ck-photo-hint" hidden>📷 กดปุ่มแล้วกล้องหน้าจะเปิดให้ถ่ายรูปตัวเอง ใช้ยืนยันว่าลงเวลาด้วยตัวเอง</p>
+      <input type="file" id="ck-photo" class="file-input" accept="image/*" capture="user">
       <button class="ck-big" id="ck-btn" disabled>กำลังโหลด…</button>
       <div class="card" id="ck-today" hidden>
         <h2>บันทึกของวันนี้</h2>
@@ -556,7 +563,7 @@
         <div id="ck-hist"></div>
         <p class="hint">เห็นเฉพาะของตัวเอง ลงเวลาผิดหรือลืมลง กรุณาแจ้งฝ่ายบุคคล</p>
       </div>
-      <p class="hint center">ระบบบันทึกเวลาและตำแหน่งเฉพาะตอนที่คุณกดปุ่ม ไม่ติดตามตำแหน่งตลอดเวลา เวลาที่บันทึกคือเวลาของระบบ</p>
+      <p class="hint center">ระบบบันทึกเวลา ตำแหน่ง และรูปถ่ายเฉพาะตอนที่คุณกดปุ่ม ไม่ติดตามตำแหน่งตลอดเวลา เวลาที่บันทึกคือเวลาของระบบ รูปถ่ายเห็นได้เฉพาะฝ่ายบุคคลและจะถูกลบหลัง 90 วัน</p>
     </div>
   </section>
 
@@ -581,10 +588,45 @@
         <p class="mi-name" id="mi-name"></p>
         <p class="mi-sub" id="mi-sub"></p>
         <div class="flash" id="mi-flash" hidden></div>
+        <div id="mi-contract" hidden style="margin-top:14px">
+          <div class="ct-card">
+            <div><b>สัญญาจ้าง</b><div class="muted" id="mi-contract-sub"></div></div>
+            <div class="act" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              <span class="pill" id="mi-contract-pill"></span>
+              <button class="sm" id="btn-mi-contract">อ่านและลงนาม</button>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:14px"><b>เอกสารของฉัน</b> <span class="muted" id="mi-count"></span></div>
         <div class="mi-bar"><i id="mi-bar"></i></div>
         <div id="mi-list"></div>
         <p class="muted" style="margin-top:12px">ไฟล์ที่ส่งเห็นได้เฉพาะฝ่ายบุคคล คุณจะเห็นเพียงสถานะของแต่ละรายการ</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s-contract" class="screen">
+    <div class="stack">
+      <div class="card">
+        <h1>สัญญาจ้าง</h1>
+        <p class="muted" id="ct-sub"></p>
+        <div class="ct-text" id="ct-text"></div>
+        <div id="ct-sign-wrap">
+          <label class="check"><input type="checkbox" id="ct-agree"> ฉันได้อ่านสัญญาจ้างฉบับนี้ครบถ้วนและยอมรับตามที่ระบุ</label>
+          <span class="field-label">ลายเซ็นของคุณ (เซ็นด้วยนิ้วในกรอบ)</span>
+          <div class="ct-pad"><canvas id="ct-canvas" width="600" height="300"></canvas></div>
+          <button class="secondary sm" id="ct-clear" style="margin-top:8px">ล้างลายเซ็น</button>
+          <label for="ct-id4">เลขท้ายบัตรประชาชน 4 หลัก (ยืนยันตัวตน)</label>
+          <input type="text" id="ct-id4" maxlength="4" autocomplete="off" inputmode="text">
+          <div class="error" id="ct-error"></div>
+          <button id="btn-ct-sign">ลงนามสัญญา</button>
+        </div>
+        <div id="ct-signed" hidden>
+          <div class="ck-ok" id="ct-signed-text"></div>
+          <button id="btn-ct-dl" style="margin-top:10px">ดาวน์โหลดสำเนา (PDF)</button>
+          <div class="error" id="ct-dl-error"></div>
+        </div>
+        <button class="secondary" id="btn-ct-back">ย้อนกลับ</button>
       </div>
     </div>
   </section>
@@ -634,7 +676,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver" id="ver" hidden>HR onLine · v0.10.0</p>
+  <p class="ver" id="ver" hidden>HR onLine · v0.11.0</p>
 </main>
 
 <script>
@@ -699,6 +741,16 @@
     NEWS_NOT_NEEDED: 'ประกาศนี้ไม่ต้องรับทราบสำหรับคุณ',
     CLOCK_NOT_READY: 'ยังไม่ได้ตั้งค่าตำแหน่งร้านของคุณ กรุณาแจ้งฝ่ายบุคคล',
     NOT_ALLOWED: 'กรุณาติดต่อ HR',
+    CONTRACT_NOT_FOUND: 'ไม่พบสัญญาจ้างของคุณ กรุณาติดต่อฝ่ายบุคคล',
+    CONTRACT_PROBLEM: 'เปิดสัญญาไม่ได้ในขณะนี้ กรุณาลองใหม่ หรือแจ้งฝ่ายบุคคล',
+    CONTRACT_AGREE_REQUIRED: 'กรุณาติ๊กยืนยันว่าได้อ่านและยอมรับสัญญา',
+    CONTRACT_ALREADY_SIGNED: 'สัญญานี้ลงนามไปแล้ว',
+    CONTRACT_CHANGED: 'สัญญามีการเปลี่ยนแปลง กรุณาปิดแล้วเปิดหน้านี้ใหม่',
+    SIGNATURE_BAD: 'ลายเซ็นไม่ถูกต้อง กรุณาล้างแล้วเซ็นใหม่',
+    ID_MISMATCH: 'เลขท้ายบัตรไม่ตรงกับข้อมูลในระบบ กรุณาตรวจสอบอีกครั้ง',
+    PHOTO_REQUIRED: 'กรุณาถ่ายรูปก่อนลงเวลา',
+    PHOTO_BAD: 'รูปไม่ถูกต้อง กรุณาถ่ายใหม่',
+    PHOTO_FAILED: 'บันทึกรูปไม่สำเร็จ กรุณาลองใหม่ หากยังไม่ได้ให้แจ้งฝ่ายบุคคล',
     EMPDOC_BAD_TYPE: 'ไฟล์ต้องเป็นรูป (JPG, PNG) หรือ PDF (รูปภาพถ่ายต้องเป็นรูปเท่านั้น)',
     EMPDOC_TOO_LARGE: 'ไฟล์ใหญ่เกินไป กรุณาใช้ไฟล์ไม่เกิน 5 MB',
     EMPDOC_TYPE: 'เอกสารประเภทนี้ไม่ต้องส่ง',
@@ -849,6 +901,15 @@
     $('mi-flash').textContent = miFlash;
     $('mi-count').textContent = r.progress.done + ' / ' + r.progress.total;
     $('mi-bar').style.width = (r.progress.total ? Math.round(100 * r.progress.done / r.progress.total) : 0) + '%';
+    const ct = r.contract;
+    $('mi-contract').hidden = !ct;
+    if (ct) {
+      const signed = ct.status === 'signed';
+      $('mi-contract-pill').textContent = signed ? 'ลงนามแล้ว' : 'รอคุณลงนาม';
+      $('mi-contract-pill').className = 'pill ' + (signed ? 'approved' : 'submitted');
+      $('mi-contract-sub').textContent = signed ? (ct.signedAt ? 'ลงนามเมื่อ ' + ct.signedAt : '') : 'กรุณาอ่านและลงนาม';
+      $('btn-mi-contract').textContent = signed ? 'ดูสัญญา' : 'อ่านและลงนาม';
+    }
     const list = $('mi-list');
     list.innerHTML = '';
     r.docs.forEach(d => {
@@ -870,6 +931,97 @@
       list.append(row);
     });
   }
+
+  // ---------- Contract: read, sign, download ----------
+  let ctData = null, ctDrawn = 0;
+  const ctCanvas = () => $('ct-canvas');
+
+  function ctPoint(e) {
+    const c = ctCanvas(), b = c.getBoundingClientRect();
+    return { x: (e.clientX - b.left) * c.width / b.width, y: (e.clientY - b.top) * c.height / b.height };
+  }
+  (function ctPad() {
+    const c = ctCanvas(), g = c.getContext('2d');
+    g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#0B1B4D';
+    let down = false;
+    c.addEventListener('pointerdown', e => { down = true; c.setPointerCapture(e.pointerId); const p = ctPoint(e); g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x + 0.1, p.y + 0.1); g.stroke(); e.preventDefault(); });
+    c.addEventListener('pointermove', e => { if (!down) return; const p = ctPoint(e); g.lineTo(p.x, p.y); g.stroke(); ctDrawn++; e.preventDefault(); });
+    const up = () => { down = false; };
+    c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+    $('ct-clear').addEventListener('click', () => { g.clearRect(0, 0, c.width, c.height); ctDrawn = 0; });
+  })();
+
+  async function openContract() {
+    $('loading-text').textContent = 'กำลังเปิดสัญญา…';
+    show('s-loading');
+    const r = await callEngine({ action: 'contractGet' });
+    if (!r.ok) { const n = notOk(r); return n; }
+    ctData = r;
+    $('ct-text').textContent = r.text;
+    $('ct-error').textContent = ''; $('ct-dl-error').textContent = '';
+    const signed = r.status === 'signed';
+    $('ct-sign-wrap').hidden = signed;
+    $('ct-signed').hidden = !signed;
+    $('ct-sub').textContent = signed ? '' : 'กรุณาอ่านให้ครบ แล้วเซ็นชื่อด้านล่าง';
+    if (signed) $('ct-signed-text').textContent = '✔ ลงนามแล้วเมื่อ ' + r.signedAt + ' · รหัสตรวจสอบ ' + r.fingerprint;
+    else {
+      $('ct-agree').checked = false; $('ct-id4').value = '';
+      ctCanvas().getContext('2d').clearRect(0, 0, 600, 300); ctDrawn = 0;
+    }
+    show('s-contract');
+    $('ct-text').scrollTop = 0;
+  }
+  $('btn-mi-contract').addEventListener('click', openContract);
+  $('btn-ct-back').addEventListener('click', () => show('s-myinfo'));
+
+  $('btn-ct-sign').addEventListener('click', async () => {
+    const err = t => { $('ct-error').textContent = t; };
+    err('');
+    if (!$('ct-agree').checked) { err(MESSAGES.CONTRACT_AGREE_REQUIRED); return; }
+    if (ctDrawn < 8) { err('กรุณาเซ็นชื่อในกรอบ'); return; }
+    const id4 = $('ct-id4').value.trim();
+    if (id4.length !== 4) { err('กรุณากรอกเลขท้ายบัตรประชาชน 4 หลัก'); return; }
+    const btn = $('btn-ct-sign');
+    btn.disabled = true; btn.textContent = 'กำลังลงนาม…';
+    try {
+      const data = ctCanvas().toDataURL('image/png').split(',')[1];
+      const r = await callEngine({ action: 'contractSign', contractId: ctData.id, agree: true, idLast4: id4, signature: { type: 'image/png', data: data } });
+      if (r.ok) {
+        miFlash = 'ลงนามสัญญาจ้างเรียบร้อยแล้ว';
+        miInfo.contract = { status: 'signed', signedAt: r.signedAt.split(' เวลา')[0] };
+        renderMyInfo(miInfo);
+        await openContract();
+      } else if (r.code === 'LINE_AUTH_FAILED') {
+        liff.logout(); liff.login();
+      } else {
+        err(MESSAGES[r.code] || MESSAGES.SERVER_ERROR);
+      }
+    } catch (e) {
+      err(MESSAGES.NETWORK);
+    } finally {
+      btn.disabled = false; btn.textContent = 'ลงนามสัญญา';
+    }
+  });
+
+  $('btn-ct-dl').addEventListener('click', async () => {
+    const box = $('ct-dl-error');
+    box.textContent = '';
+    const btn = $('btn-ct-dl');
+    btn.disabled = true;
+    try {
+      const r = await callEngine({ action: 'contractPdf' });
+      if (!r.ok) { box.textContent = MESSAGES[r.code] || MESSAGES.SERVER_ERROR; return; }
+      const bin = atob(r.data), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const file = new File([bytes], r.fileName, { type: 'application/pdf' });
+      await saveFile(file);
+      if (androidInLine()) box.textContent = 'หากบันทึกไฟล์ไม่ได้ในแอป LINE กรุณาขอสำเนาจากฝ่ายบุคคล';
+    } catch (e) {
+      box.textContent = MESSAGES.NETWORK;
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   function openUpload(d) {
     miDoc = d;
@@ -1435,6 +1587,7 @@
     const reasonBox = $('ck-reason');
     reasonBox.hidden = true;
     btn.classList.toggle('out', next === 'OUT');
+    $('ck-photo-hint').hidden = !(clockData && clockData.photoRequired && next !== 'DONE');
 
     if (next === 'DONE') {
       gps.hidden = true;
@@ -1561,11 +1714,58 @@
     return r;
   }
 
+  // The selfie: the phone's front camera opens from the tap itself. The picture is shrunk to about 60 KB before it is sent.
+  function ckTakePhoto() {
+    return new Promise(resolve => {
+      const inp = $('ck-photo');
+      inp.value = '';
+      let done = false;
+      const finish = f => {
+        if (done) return;
+        done = true;
+        inp.removeEventListener('change', onChange);
+        window.removeEventListener('focus', onFocus);
+        resolve(f);
+      };
+      const onChange = () => finish(inp.files[0] || null);
+      const onFocus = () => setTimeout(() => finish(inp.files[0] || null), 3000);   // back from the camera without a picture = cancelled
+      inp.addEventListener('change', onChange);
+      inp.addEventListener('cancel', () => finish(null), { once: true });
+      window.addEventListener('focus', onFocus);
+      inp.click();
+    });
+  }
+
+  function shrinkPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, 720 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve({ type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.7).split(',')[1] });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+
   async function ckPress() {
     if (clockBusy || !clockData) return;
     if (!clockPos || clockLocError) { await ckLocate(); return; }
     const before = ckSide();
     if (before && !before.inside && !clockData.outsideAllowed) { await ckLocate(); return; }   // outside: the button only re-checks the position
+    let photo = null;
+    if (clockData.photoRequired) {
+      ckError('');
+      const f = await ckTakePhoto();
+      if (!f) { ckError('ต้องถ่ายรูปตัวเองก่อนจึงจะลงเวลาได้ กรุณากดปุ่มอีกครั้ง'); return; }
+      try { photo = await shrinkPhoto(f); } catch (err) { ckError(MESSAGES.PHOTO_BAD); return; }
+    }
     clockBusy = true;
     ckError('');
     $('ck-ok').hidden = true;
@@ -1575,6 +1775,7 @@
       // a reading older than 20 seconds is taken again at the moment of the tap
       if (Date.now() - clockPos.at > 20000) clockPos = await ckGetPosition();
       const payload = { action: 'clockSubmit', type: clockData.next, lat: clockPos.lat, lng: clockPos.lng, accuracy: clockPos.accuracy };
+      if (photo) payload.photo = photo;
       const side = ckSide();
       if (side && (!side.inside || clockForceReason)) {
         const rv = ckReasonValue();
