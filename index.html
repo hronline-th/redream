@@ -676,7 +676,7 @@
     </div>
   </section>
   <div id="debug" hidden></div>
-  <p class="ver" id="ver" hidden>HR onLine · v0.11.0</p>
+  <p class="ver" id="ver" hidden>HR onLine · v0.11.1</p>
 </main>
 
 <script>
@@ -742,6 +742,7 @@
     CLOCK_NOT_READY: 'ยังไม่ได้ตั้งค่าตำแหน่งร้านของคุณ กรุณาแจ้งฝ่ายบุคคล',
     NOT_ALLOWED: 'กรุณาติดต่อ HR',
     CONTRACT_NOT_FOUND: 'ไม่พบสัญญาจ้างของคุณ กรุณาติดต่อฝ่ายบุคคล',
+    CONTRACT_NOT_COMPLETE: 'สัญญายังไม่ครบทั้งสองฝ่าย จะดาวน์โหลดได้เมื่อบริษัทลงนามแล้ว',
     CONTRACT_PROBLEM: 'เปิดสัญญาไม่ได้ในขณะนี้ กรุณาลองใหม่ หรือแจ้งฝ่ายบุคคล',
     CONTRACT_AGREE_REQUIRED: 'กรุณาติ๊กยืนยันว่าได้อ่านและยอมรับสัญญา',
     CONTRACT_ALREADY_SIGNED: 'สัญญานี้ลงนามไปแล้ว',
@@ -904,11 +905,12 @@
     const ct = r.contract;
     $('mi-contract').hidden = !ct;
     if (ct) {
-      const signed = ct.status === 'signed';
-      $('mi-contract-pill').textContent = signed ? 'ลงนามแล้ว' : 'รอคุณลงนาม';
-      $('mi-contract-pill').className = 'pill ' + (signed ? 'approved' : 'submitted');
-      $('mi-contract-sub').textContent = signed ? (ct.signedAt ? 'ลงนามเมื่อ ' + ct.signedAt : '') : 'กรุณาอ่านและลงนาม';
-      $('btn-mi-contract').textContent = signed ? 'ดูสัญญา' : 'อ่านและลงนาม';
+      const st = ct.status;
+      $('mi-contract-pill').textContent = st === 'completed' ? 'ครบทั้งสองฝ่าย' : (st === 'signed' ? 'รอบริษัทลงนาม' : 'รอคุณลงนาม');
+      $('mi-contract-pill').className = 'pill ' + (st === 'completed' ? 'approved' : 'submitted');
+      $('mi-contract-sub').textContent = st === 'completed' ? (ct.completedAt ? 'เสร็จสมบูรณ์เมื่อ ' + ct.completedAt : '')
+        : (st === 'signed' ? (ct.signedAt ? 'คุณลงนามเมื่อ ' + ct.signedAt : '') : 'กรุณาอ่านและลงนาม');
+      $('btn-mi-contract').textContent = st === 'ready' ? 'อ่านและลงนาม' : 'ดูสัญญา';
     }
     const list = $('mi-list');
     list.innerHTML = '';
@@ -959,11 +961,15 @@
     ctData = r;
     $('ct-text').textContent = r.text;
     $('ct-error').textContent = ''; $('ct-dl-error').textContent = '';
-    const signed = r.status === 'signed';
+    const signed = r.status !== 'ready';
+    const complete = r.status === 'completed';
     $('ct-sign-wrap').hidden = signed;
     $('ct-signed').hidden = !signed;
+    $('btn-ct-dl').hidden = !complete;
     $('ct-sub').textContent = signed ? '' : 'กรุณาอ่านให้ครบ แล้วเซ็นชื่อด้านล่าง';
-    if (signed) $('ct-signed-text').textContent = '✔ ลงนามแล้วเมื่อ ' + r.signedAt + ' · รหัสตรวจสอบ ' + r.fingerprint;
+    if (signed) $('ct-signed-text').textContent = complete
+      ? '✔ สัญญาครบทั้งสองฝ่ายแล้ว (เสร็จสมบูรณ์เมื่อ ' + r.completedAt + ') · รหัสตรวจสอบ ' + r.fingerprint
+      : '✔ คุณลงนามแล้วเมื่อ ' + r.signedAt + ' · ตอนนี้รอบริษัทลงนาม เมื่อเสร็จแล้วคุณจะได้รับข้อความใน LINE และดาวน์โหลดสำเนาฉบับสมบูรณ์ได้ที่หน้านี้';
     else {
       $('ct-agree').checked = false; $('ct-id4').value = '';
       ctCanvas().getContext('2d').clearRect(0, 0, 600, 300); ctDrawn = 0;
@@ -988,7 +994,7 @@
       const r = await callEngine({ action: 'contractSign', contractId: ctData.id, agree: true, idLast4: id4, signature: { type: 'image/png', data: data } });
       if (r.ok) {
         miFlash = 'ลงนามสัญญาจ้างเรียบร้อยแล้ว';
-        miInfo.contract = { status: 'signed', signedAt: r.signedAt.split(' เวลา')[0] };
+        miInfo.contract = { status: 'signed', signedAt: r.signedAt.split(' เวลา')[0], completedAt: '' };
         renderMyInfo(miInfo);
         await openContract();
       } else if (r.code === 'LINE_AUTH_FAILED') {
